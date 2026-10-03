@@ -27,7 +27,7 @@ import { LIMITS } from '@playlist-avatar/contracts';
 import { errorMessage } from './error-messages.ts';
 import { normalizeAsset } from './assets.ts';
 import { prepareImport } from './prepare-import.ts';
-import { readEnd } from './read-range.ts';
+import { readEnd,canReadNext } from './read-range.ts';
 import { useEditor } from './editor-store.ts';
 import styles from './App.module.css';
 
@@ -104,7 +104,7 @@ export function App() {
         {importer.pending && <div className="import-status">{importer.pending.collection.snapshot.title} · {chinese ? '封面不可用，可换用本地图片' : 'Covers unavailable; choose local images'}</div>}
         {preparedImport && <button className="primary-button full-width" onClick={() => { try { editor.add(preparedImport.assets, preparedImport.snapshot, true); setPreparedImport(undefined); } catch { setNotice(chinese ? '素材预算已满，请先保存作品' : 'Material budget reached; save your artwork first'); } }}>{chinese ? '应用到作品' : 'Apply to artwork'}</button>}
         {importer.result && !importer.result.collection.snapshot.coverage.complete && <div className="import-status">{chinese ? '已读范围 ' : 'Read range '}{importer.result.collection.snapshot.coverage.offset}–{readEnd(importer.result.collection.snapshot.coverage)}{importer.result.collection.snapshot.coverage.knownTotal !== undefined ? ` / ${importer.result.collection.snapshot.coverage.knownTotal}` : (chinese ? ' · 总量未确认' : ' · Total unverified')}
-          {['netease','qqmusic'].includes(importer.result.collection.snapshot.source) && importer.result.collection.snapshot.coverage.knownTotal !== undefined && readEnd(importer.result.collection.snapshot.coverage)>importer.result.collection.snapshot.coverage.offset && readEnd(importer.result.collection.snapshot.coverage) < importer.result.collection.snapshot.coverage.knownTotal && <button className="quiet-button" onClick={() => { const s = importer.result!.collection.snapshot; if (s.source === 'netease' || s.source === 'qqmusic') startImport(s.collectionId, s.source, readEnd(s.coverage)); }}>{chinese ? '读取下一段' : 'Read next range'}</button>}</div>}
+          {canReadNext(importer.result.collection.snapshot) && <button className="quiet-button" onClick={() => { const s = importer.result!.collection.snapshot; if (s.source === 'netease' || s.source === 'qqmusic') startImport(s.collectionId, s.source, readEnd(s.coverage)); }}>{chinese ? '读取下一段' : 'Read next range'}</button>}</div>}
         <button className="quiet-button full-width" onClick={() => localInput.current?.click()}>{chinese ? '添加本地图片' : 'Add local images'}</button><input ref={localInput} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label={chinese ? '本地图片文件' : 'Local image files'} onChange={event => void local(event.target.files)} />
         <AdvancedDialog chinese={chinese} read={advancedImport} cancel={()=>{mutation.current++;importer.cancel();setPreparedImport(undefined);}}/>
   </>;

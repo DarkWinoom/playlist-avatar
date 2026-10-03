@@ -47,7 +47,7 @@ export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, 
       if (targetCanvas) { context.clearRect(0,0,size,size); context.drawImage(targetCanvas,0,0); }
       else render(context, size, recipe, images, tiles,false,artworkWeights(recipe,assets));
       painted.current=true;
-      if(images.size&&!measured.current){performance.mark('playlist-avatar:preview-ready');measured.current=true;}
+      if(images.size&&!measured.current){performance.mark('playlist-avatar:preview-ready');element.dataset.readyMs=performance.now().toFixed(1);measured.current=true;}
       onFrame?.(performance.now());
       if(crossing&&progress<1){context.globalAlpha=1-progress;context.drawImage(previous,0,0,size,size);context.globalAlpha=1;}
       if(checks)small.current.forEach(check=>{if(check){const c=check.getContext('2d');c?.clearRect(0,0,check.width,check.height);c?.drawImage(element,0,0,check.width,check.height);}});

@@ -19,3 +19,9 @@ jobs:
           run_install: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
+      - run: docker build -t playlist-avatar:ci .
+      - id: start-container
+        run: docker run -d --name playlist-avatar-ci --init --memory 256m --memory-swap 256m --cpus 1 --pids-limit 64 --read-only --tmpfs /tmp:size=16m --cap-drop ALL --security-opt no-new-privileges:true -e PUBLIC_ORIGIN=http://127.0.0.1:18080 -p 127.0.0.1:18080:8080 playlist-avatar:ci
+      - run: node scripts/smoke.mjs http://127.0.0.1:18080
+      - if: always() && steps.start-container.outcome == 'success'
+        run: docker rm --force playlist-avatar-ci

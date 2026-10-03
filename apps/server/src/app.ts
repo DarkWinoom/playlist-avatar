@@ -97,7 +97,8 @@ export function createApp(config: ServerConfig) {
     } catch (error) { lifecycle.dispose(); throw error; }
   });
   app.all('/api/*', () => { throw new ServiceError('UNSUPPORTED_SOURCE', 501); });
-  app.use('*', serveStatic({ root: config.staticRoot }));
+  app.use('/assets/*',async(context,next)=>{context.header('Vary','Accept-Encoding');await next();const type=context.res.headers.get('Content-Type')||'';if(context.res.status===200&&(type.includes('javascript')||type.startsWith('text/css')))context.header('Cache-Control','public, max-age=31536000, immutable');});
+  app.use('*', serveStatic({ root: config.staticRoot,precompressed:true }));
   app.get('*', serveStatic({ path: `${config.staticRoot}/index.html` }));
   return app;
 }

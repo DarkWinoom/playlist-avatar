@@ -13,7 +13,9 @@
     "build": "pnpm --filter @playlist-avatar/web build && pnpm --filter @playlist-avatar/server build",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "check": "pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "notices": "node scripts/notices.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "typescript": "7.0.2",
