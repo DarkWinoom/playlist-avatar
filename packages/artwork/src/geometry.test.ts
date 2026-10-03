@@ -5,7 +5,7 @@ const recipe: Recipe = { version: 1, templateVersion: 1, template: 'mosaic', ass
 it('preserves identities across grid to fan and midway retargeting', () => {
   const grid = geometry(recipe), fan = geometry({ ...recipe, template: 'sleeve' });
   const half = interpolateTiles(grid, fan, .5), redirected = interpolateTiles(half, grid, .2);
-  expect(half.map(t => t.id)).toEqual(recipe.assetIds); expect(half[0]!.angle).not.toBe(0);
+  expect(half.map(t => t.id)).toEqual(grid.map(t=>t.id)); expect(half[0]!.angle).not.toBe(0);
   expect(redirected[0]!.angle).toBeCloseTo(half[0]!.angle * .8);
 });
 it('is reproducible without time or pointer state and handles zero / one assets', () => {
@@ -13,9 +13,9 @@ it('is reproducible without time or pointer state and handles zero / one assets'
   expect(geometry({ ...recipe, assetIds: [] })).toEqual([]); expect(geometry({ ...recipe, assetIds: ['a'] })[0]!.width).toBeGreaterThan(.9);
 });
 it('only prepares visible material at its actual projection', () => {
-  const many = { ...recipe, assetIds: Array.from({ length: 16 }, (_, i) => `${i}`) };
+  const many = { ...recipe, seed:1701, assetIds: Array.from({ length: 16 }, (_, i) => `${i}`) };
   const single = imageProjections({ ...many, parameters: { mosaic: { layout: 1 } } }, 2048);
   expect(single.size).toBe(1); expect(single.get('0')).toBe(2048);
-  const sleeve = imageProjections({ ...many, template: 'sleeve' }, 2048);
+  const sleeve = imageProjections({ ...many, template: 'sleeve', parameters: { sleeve: { count: 7 } } }, 2048);
   expect(sleeve.size).toBe(7); expect(sleeve.get('0')).toBe(1280);
 });

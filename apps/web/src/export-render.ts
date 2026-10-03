@@ -1,15 +1,16 @@
-import { render, imageInfo, imageProjections } from '@playlist-avatar/artwork';
+import { render, imageInfo, imageProjections, prepareRenderer } from '@playlist-avatar/artwork';
 import type { RenderImage } from '@playlist-avatar/artwork';
 import type { ArtworkAsset, ExportOptions, Recipe } from '@playlist-avatar/contracts';
 import { canvasBlob } from './assets.ts';
 
-export async function renderExport(recipe: Recipe, assets: ArtworkAsset[], options: ExportOptions) {
+export async function renderExport(recipe: Recipe, assets: ArtworkAsset[], options: ExportOptions, path: 'auto'|'html' = 'auto') {
   const images = new Map<string, RenderImage>();
-  const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(options.size, options.size) : document.createElement('canvas');
+  const canvas = path==='auto' && typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(options.size, options.size) : document.createElement('canvas');
   canvas.width = canvas.height = options.size;
   const context = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!context) throw new Error('UNSUPPORTED_FORMAT');
   try {
+    await prepareRenderer(recipe.template);
     const projections = imageProjections(recipe, options.size);
     for (const asset of assets) {
       const dimension = projections.get(asset.id); if (!dimension) continue;

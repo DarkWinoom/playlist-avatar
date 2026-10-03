@@ -14,16 +14,18 @@ function read(): Preferences {
 }
 export function usePreferences() {
   const [preferences, setPreferences] = useState(read);
+  const [systemReduced,setSystemReduced]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     const query = matchMedia('(prefers-color-scheme: dark)');
+    const motion=matchMedia('(prefers-reduced-motion: reduce)');
     const apply = () => {
       document.documentElement.dataset.theme = preferences.theme === 'system' ? (query.matches ? 'ink' : 'paper') : preferences.theme;
-      document.documentElement.dataset.reduceMotion = String(preferences.reduceMotion);
+      document.documentElement.dataset.reduceMotion = String(preferences.reduceMotion||motion.matches);
       document.documentElement.lang = preferences.locale;
     };
-    apply(); query.addEventListener('change', apply);
+    const motionChanged=()=>{setSystemReduced(motion.matches);apply();};apply(); query.addEventListener('change', apply);motion.addEventListener('change',motionChanged);
     try { localStorage.setItem(storageKey, JSON.stringify(preferences)); } catch {}
-    return () => query.removeEventListener('change', apply);
+    return () => {query.removeEventListener('change', apply);motion.removeEventListener('change',motionChanged);};
   }, [preferences]);
-  return [preferences, setPreferences] as const;
+  return [preferences, setPreferences,preferences.reduceMotion||systemReduced] as const;
 }
