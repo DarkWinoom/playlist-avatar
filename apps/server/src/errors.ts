@@ -9,6 +9,9 @@ export class ServiceError extends Error {
     super(code); this.name = 'ServiceError'; this.code = code; this.status = status; this.retryAfterMs = retryAfterMs;
   }
 }
+export function abortError(signal: AbortSignal) {
+  return signal.reason instanceof ServiceError ? signal.reason : new ServiceError('CANCELLED', 408);
+}
 
 export function publicError(error: unknown) {
   const failure = error instanceof ServiceError ? error : new ServiceError('INTERNAL_ERROR', 500);

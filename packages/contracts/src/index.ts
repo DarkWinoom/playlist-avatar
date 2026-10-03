@@ -1,4 +1,6 @@
 import { z } from 'zod';
+export { identifyShare } from './share.ts';
+export type { ShareTarget, PublicPlatform } from './share.ts';
 
 export const CONTRACT_VERSION = 1 as const;
 export const SOURCE_IDS = ['netease', 'qqmusic', 'local', 'lastfm', 'subsonic', 'jellyfin'] as const;
@@ -26,10 +28,11 @@ const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const date = z.iso.datetime();
 export const ColorSchema = z.string().regex(/^#[\da-fA-F]{6}$/);
 
-export function sourceNamespace(source: SourceId, connectionId = 'public') {
+export function sourceNamespace(source: SourceId, connectionId?: string) {
   SourceSchema.parse(source);
+  if (connectionId === undefined) return `${source}:public:`;
   if (!connectionId || connectionId.length > 128) throw new Error('Invalid connection namespace');
-  return `${source}:${encodeURIComponent(connectionId)}:`;
+  return `${source}:connection:${encodeURIComponent(connectionId)}:`;
 }
 export function sourceKey(source: SourceId, connectionId: string | undefined, kind: string, id: string, order?: number) {
   const value = `${sourceNamespace(source, connectionId)}${encodeURIComponent(kind)}:${encodeURIComponent(id)}${order === undefined ? '' : `:${order}`}`;
@@ -40,11 +43,11 @@ function matchesSourceKey(actual: string, ...parts: Parameters<typeof sourceKey>
 }
 
 export const CoverageSchema = z.object({
-  received: count, reportedTotal: count.optional(), knownTotal: count.optional(), complete: z.boolean(),
+  received: count, offset: count.default(0), reportedTotal: count.optional(), knownTotal: count.optional(), complete: z.boolean(),
   limitReason: z.enum(['budget', 'upstream', 'missing-details', 'unknown-total']).optional(),
-}).refine(value => value.knownTotal === undefined || value.received <= value.knownTotal,
+}).refine(value => value.knownTotal === undefined || value.offset + value.received <= value.knownTotal,
   { message: 'Received count exceeds verified total' }).refine(value => !value.complete || (!value.limitReason
-    && value.knownTotal !== undefined && value.received === value.knownTotal), { message: 'Unverified coverage marked complete' });
+    && value.offset === 0 && value.knownTotal !== undefined && value.received === value.knownTotal), { message: 'Unverified coverage marked complete' });
 export type Coverage = z.infer<typeof CoverageSchema>;
 
 export const StatisticsSchema = z.object({ playCount: count.optional(), occurrenceCount: count.optional(),
@@ -79,7 +82,7 @@ export const ResolveInputSchema = z.object({ input: z.string().min(1).refine(val
 export type ResolveInput = z.infer<typeof ResolveInputSchema>;
 const parameter = z.union([z.number().finite(), z.boolean(), z.string().max(128)]);
 export const RecipeSchema = z.object({ version: z.literal(1), template: TemplateSchema, templateVersion: z.literal(1),
-  assetIds: z.array(key).max(LIMITS.selected), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
+  assetIds: z.array(key).max(LIMITS.selected).refine(ids => new Set(ids).size === ids.length), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
   seed: z.number().int().min(0).max(4294967295), palette: z.array(ColorSchema).min(1).max(8), paletteLocked: z.boolean(),
   title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1) });
 export type Recipe = z.infer<typeof RecipeSchema>;

@@ -1,4 +1,10 @@
 import type { SourceId } from '@playlist-avatar/contracts';
+export { imageInfo } from './image-info.ts';
+export type { ImageInfo } from './image-info.ts';
+export { geometry, interpolateTiles, seeded, parameter, imageProjections } from './geometry.ts';
+export type { Tile } from './geometry.ts';
+export { render, cover } from './render.ts';
+export type { RenderImage } from './render.ts';
 
 export interface ArtworkInput {
   id: string;

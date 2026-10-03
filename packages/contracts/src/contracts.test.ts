@@ -13,6 +13,7 @@ describe('source contracts', () => {
     expect(CoverageSchema.parse({ received: 613, knownTotal: 613, reportedTotal: 620, complete: true }).complete).toBe(true);
     expect(CoverageSchema.safeParse({ received: 1, reportedTotal: 100, complete: true }).success).toBe(false);
     expect(CoverageSchema.safeParse({ received: 1, complete: true }).success).toBe(false);
+    expect(CoverageSchema.safeParse({ offset: 99, received: 1, knownTotal: 100, complete: true }).success).toBe(false);
   });
   it('limits share text by UTF-8 bytes', () => {
     expect(ResolveInputSchema.safeParse({ input: '歌'.repeat(700) }).success).toBe(false);
@@ -28,6 +29,7 @@ describe('source contracts', () => {
     data.snapshot.coverage.received = 2; expect(CollectionSchema.safeParse(data).success).toBe(false);
   });
   it('isolates identical IDs across services and connection profiles', () => {
+    expect(sourceKey('netease', undefined, 'track', '12', 0)).not.toBe(sourceKey('netease', 'public', 'track', '12', 0));
     const key = sourceKey('subsonic', 'account-one', 'track', '12', 0);
     expect(key).not.toBe(sourceKey('jellyfin', 'account-one', 'track', '12', 0));
     expect(key).not.toBe(sourceKey('subsonic', 'account-two', 'track', '12', 0));
