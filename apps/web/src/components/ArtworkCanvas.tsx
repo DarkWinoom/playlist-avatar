@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { geometry, interpolateTiles, render, imageProjections, prepareRenderer, CATALOG } from '@playlist-avatar/artwork';
+import { geometry, interpolateTiles, render, imageProjections, prepareRenderer, CATALOG,artworkWeights } from '@playlist-avatar/artwork';
 import type { RenderImage, Tile } from '@playlist-avatar/artwork';
 import type { ArtworkAsset, Recipe } from '@playlist-avatar/contracts';
 import type { TemplateId } from '@playlist-avatar/contracts';
 
-export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, checks = false }: { recipe: Recipe; assets: Record<string, ArtworkAsset>; reduce: boolean; circle: boolean; direct?: boolean; checks?:boolean }) {
+export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, checks = false,onFrame }: { recipe: Recipe; assets: Record<string, ArtworkAsset>; reduce: boolean; circle: boolean; direct?: boolean; checks?:boolean;onFrame?:(time:number)=>void }) {
   const canvas = useRef<HTMLCanvasElement>(null), holder = useRef<HTMLDivElement>(null);
   const small=useRef<(HTMLCanvasElement|null)[]>([]);
   const [size, setSize] = useState(640), [images, setImages] = useState(new Map<string, RenderImage>());
   const [ready, setReady] = useState<TemplateId>();
   const painted=useRef(false);
+  const measured=useRef(false);
   const visible = useRef<Tile[]>([]); const lastTemplate = useRef(recipe.template);
   const projections = imageProjections(recipe, size), projectionKey = [...projections].map(([id, value]) => `${id}:${value}`).join('|');
   useEffect(() => { const element = holder.current!;
@@ -38,18 +39,23 @@ export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, 
     const start = visible.current, target = geometry(recipe); let frame = 0;
     const immediate = reduce || direct || !painted.current || document.hidden;
     const since = performance.now(); lastTemplate.current = recipe.template;
+    const targetCanvas = crossing ? document.createElement('canvas') : undefined;
+    if (targetCanvas) { targetCanvas.width = targetCanvas.height = size; render(targetCanvas.getContext('2d')!, size, recipe, images, target, false, artworkWeights(recipe, assets)); }
     const draw = (now: number) => {
-      const progress = immediate || document.hidden ? 1 : Math.min(1, (now - since) / 280), ease = 1 - Math.pow(1 - progress, 3);
+      const progress = immediate || document.hidden ? 1 : Math.max(0, Math.min(1, (now - since) / 280)), ease = 1 - Math.pow(1 - progress, 3);
       const tiles = interpolateTiles(start, target, ease); visible.current = tiles;
-      render(context, size, recipe, images, tiles);
+      if (targetCanvas) { context.clearRect(0,0,size,size); context.drawImage(targetCanvas,0,0); }
+      else render(context, size, recipe, images, tiles,false,artworkWeights(recipe,assets));
       painted.current=true;
+      if(images.size&&!measured.current){performance.mark('playlist-avatar:preview-ready');measured.current=true;}
+      onFrame?.(performance.now());
       if(crossing&&progress<1){context.globalAlpha=1-progress;context.drawImage(previous,0,0,size,size);context.globalAlpha=1;}
       if(checks)small.current.forEach(check=>{if(check){const c=check.getContext('2d');c?.clearRect(0,0,check.width,check.height);c?.drawImage(element,0,0,check.width,check.height);}});
       if (progress < 1 && !document.hidden) frame = requestAnimationFrame(draw);
       else previous.width=previous.height=0;
     };
     const visibility=()=>{cancelAnimationFrame(frame);draw(performance.now());};document.addEventListener('visibilitychange',visibility);
-    frame = requestAnimationFrame(draw); return () => { cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);previous.width=previous.height=0; };
+    frame = requestAnimationFrame(draw); return () => { cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);previous.width=previous.height=0;if(targetCanvas)targetCanvas.width=targetCanvas.height=0; };
   }, [recipe, size, images, reduce, direct, ready, checks]);
   useEffect(() => () => images.forEach(value => (value.image as ImageBitmap).close()), [images]);
   return <><div ref={holder} className={`artwork-canvas${circle ? ' circle' : ''}`} aria-busy={ready!==recipe.template}><canvas ref={canvas} role="img" aria-label={`${recipe.template} artwork`} /></div>{checks&&<div className="avatar-checks">{[48,96].map((value,i)=><div key={value}><canvas ref={element=>{small.current[i]=element;}} width={value} height={value} role="img" aria-label={`${value}px avatar`} /><small>{value}px</small></div>)}</div>}</>;

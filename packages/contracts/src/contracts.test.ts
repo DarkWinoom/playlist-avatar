@@ -19,6 +19,11 @@ describe('source contracts', () => {
     expect(ResolveInputSchema.safeParse({ input: '歌'.repeat(700) }).success).toBe(false);
     expect(ResolveInputSchema.parse({ input: '3778678', source: 'netease' }).offset).toBe(0);
   });
+  it('distinguishes missing detail rows from the consumed source range',()=>{
+    expect(CoverageSchema.safeParse({offset:0,received:1999,scanned:2000,knownTotal:2301,complete:false}).success).toBe(true);
+    expect(CoverageSchema.safeParse({offset:0,received:2,scanned:1,complete:false}).success).toBe(false);
+    expect(CoverageSchema.safeParse({offset:1000,received:499,scanned:500,knownTotal:1499,complete:false}).success).toBe(false);
+  });
   it('rejects mixed-source entries and false coverage', () => {
     const data = { version: 1, snapshot: { key: sourceKey('netease', undefined, 'collection', 'p'), source: 'netease', collectionId: 'p', title: 'Example',
       kind: 'playlist', fetchedAt: '2026-10-03T00:00:00Z', coverage: { received: 1, knownTotal: 1, complete: true } },

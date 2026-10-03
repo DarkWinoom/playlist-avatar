@@ -7,6 +7,7 @@ export { render, cover, prepareRenderer } from './render.ts';
 export type { RenderImage } from './render.ts';
 export { CATALOG, FEATURED, controlsFor } from './catalog.ts';
 export type { Control } from './catalog.ts';
+export{artworkWeights}from'./weights.ts';
 
 export interface ArtworkInput {
   id: string;

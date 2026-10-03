@@ -29,11 +29,11 @@ function track(source: PublicPlatform, rawValue: unknown, order: number): Provid
     artists, albumId: albumId || undefined, album: albumName || undefined, order, coverUrl: coverUrl || undefined };
 }
 function result(source: PublicPlatform, id: string, title: string, tracks: ProviderTrack[], offset: number,
-  knownTotal: number | undefined, reportedTotal: number | undefined, missing: boolean): ProviderResult {
+  knownTotal: number | undefined, reportedTotal: number | undefined, missing: boolean, scanned=tracks.length): ProviderResult {
   const complete = offset === 0 && !missing && knownTotal !== undefined && tracks.length === knownTotal;
   return { tracks, snapshot: { key: sourceKey(source, undefined, 'collection', id), source, collectionId: id, title,
     kind: 'playlist', fetchedAt: new Date().toISOString(), coverage: {
-      received: tracks.length, offset, knownTotal, reportedTotal, complete,
+      received: tracks.length, scanned, offset, knownTotal, reportedTotal, complete,
       ...(complete ? {} : { limitReason: missing ? 'missing-details' as const : knownTotal === undefined ? 'unknown-total' as const : 'budget' as const }),
     }, warnings: missing || (knownTotal !== undefined && reportedTotal !== undefined && knownTotal !== reportedTotal) ? ['INCOMPLETE_SOURCE'] : [] } };
 }
@@ -52,7 +52,7 @@ export async function neteasePlaylist(id: string, offset: number, signal: AbortS
   if (!ids.length) {
     const values = inline.slice(offset, offset + LIMITS.metadata).map((value, index) => track('netease', value, offset + index)).filter((value): value is ProviderTrack => !!value);
     if (reported && !values.length) throw new ServiceError('INCOMPLETE_SOURCE', 502);
-    return result('netease', id, string(playlist.name), values, offset, reported ?? (inline.length === 0 ? 0 : undefined), reported, values.length !== inline.slice(offset, offset + LIMITS.metadata).length);
+    return result('netease', id, string(playlist.name), values, offset, reported ?? (inline.length === 0 ? 0 : undefined), reported, values.length !== inline.slice(offset, offset + LIMITS.metadata).length, inline.slice(offset,offset+LIMITS.metadata).length);
   }
   const selected = ids.slice(offset, offset + LIMITS.metadata);
   if (offset > ids.length) throw new ServiceError('INVALID_INPUT', 400);
@@ -68,7 +68,7 @@ export async function neteasePlaylist(id: string, offset: number, signal: AbortS
     for (const value of array(detail.songs)) songs.set(string(object(value).id), value);
   }
   const tracks = selected.map((value, index) => track('netease', songs.get(value), offset + index)).filter((value): value is ProviderTrack => !!value);
-  return result('netease', id, string(playlist.name), tracks, offset, ids.length, reported, tracks.length !== selected.length);
+  return result('netease', id, string(playlist.name), tracks, offset, ids.length, reported, tracks.length !== selected.length, selected.length);
 }
 
 export async function qqPlaylist(id: string, offset: number, signal: AbortSignal, deadline: number): Promise<ProviderResult> {
@@ -76,7 +76,7 @@ export async function qqPlaylist(id: string, offset: number, signal: AbortSignal
   const tracks: ProviderTrack[] = [];
   let reported: number | undefined;
   let title = '';
-  let missing = false;
+  let missing = false, scanned = 0;
   let previousPageIds: string | undefined;
   while (tracks.length < LIMITS.metadata) {
     const begin = offset + tracks.length;
@@ -94,6 +94,7 @@ export async function qqPlaylist(id: string, offset: number, signal: AbortSignal
     if (page.length && (pageIds === previousPageIds || (tracks.length > 0 && pageIds === tracks.slice(0, page.length).map(value => value.sourceId).join(',')))) { missing = true; break; }
     if (typeof cd.song_begin === 'number' && cd.song_begin !== begin) { missing = true; break; }
     previousPageIds = pageIds;
+    scanned += Math.min(page.length,size);
     const parsed = page.slice(0, size).map((value, index) => track('qqmusic', value, begin + index)).filter((value): value is ProviderTrack => !!value);
     tracks.push(...parsed);
     if (parsed.length !== page.length) { missing = true; break; }
@@ -101,5 +102,5 @@ export async function qqPlaylist(id: string, offset: number, signal: AbortSignal
     if (!page.length || page.length < size) { if (reported !== undefined && offset + tracks.length < reported) missing = true; break; }
   }
   if (reported && !tracks.length) throw new ServiceError('INCOMPLETE_SOURCE', 502);
-  return result('qqmusic', id, title, tracks, offset, reported, reported, missing);
+  return result('qqmusic', id, title, tracks, offset, reported, reported, missing, scanned);
 }

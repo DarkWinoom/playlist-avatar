@@ -43,9 +43,9 @@ function matchesSourceKey(actual: string, ...parts: Parameters<typeof sourceKey>
 }
 
 export const CoverageSchema = z.object({
-  received: count, offset: count.default(0), reportedTotal: count.optional(), knownTotal: count.optional(), complete: z.boolean(),
+  received: count, scanned: count.max(LIMITS.metadata).optional(), offset: count.default(0), reportedTotal: count.optional(), knownTotal: count.optional(), complete: z.boolean(),
   limitReason: z.enum(['budget', 'upstream', 'missing-details', 'unknown-total']).optional(),
-}).refine(value => value.knownTotal === undefined || value.offset + value.received <= value.knownTotal,
+}).refine(value => value.scanned===undefined||value.scanned>=value.received,{message:'Scanned range is smaller than returned items'}).refine(value => value.knownTotal === undefined || value.offset + (value.scanned??value.received) <= value.knownTotal,
   { message: 'Received count exceeds verified total' }).refine(value => !value.complete || (!value.limitReason
     && value.offset === 0 && value.knownTotal !== undefined && value.received === value.knownTotal), { message: 'Unverified coverage marked complete' });
 export type Coverage = z.infer<typeof CoverageSchema>;
@@ -87,11 +87,11 @@ const parameter = z.union([z.number().finite(), z.boolean(), z.string().max(128)
 export const RecipeSchema = z.object({ version: z.literal(1), template: TemplateSchema, templateVersion: z.literal(1),
   assetIds: z.array(key).max(LIMITS.selected).refine(ids => new Set(ids).size === ids.length), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
   seed: z.number().int().min(0).max(4294967295), palette: z.array(ColorSchema).min(1).max(8), paletteLocked: z.boolean(),
-  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1) });
+  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]) });
 export type Recipe = z.infer<typeof RecipeSchema>;
 export const AssetMetadataSchema = z.object({ id: key, fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   width: count.min(1).max(8192), height: count.min(1).max(8192), bytes: count,
-  colors: z.array(ColorSchema).max(8), sourceKey: key.optional(), label: z.string().max(200), createdAt: date });
+  colors: z.array(ColorSchema).max(8), sourceKey: key.optional(), label: z.string().max(200), createdAt: date,order:count.optional(),statistics:StatisticsSchema.optional() });
 export type AssetMetadata = z.infer<typeof AssetMetadataSchema>;
 export interface ArtworkAsset extends AssetMetadata { blob: Blob; thumbnail: Blob }
 export const ProjectSchema = z.object({ version: z.literal(1), id: key, name: z.string().min(1).max(120),

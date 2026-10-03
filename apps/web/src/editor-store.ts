@@ -5,7 +5,7 @@ import type { ArtworkAsset, Recipe, SourceSnapshot, TemplateId } from '@playlist
 export const DEFAULT_PALETTE = ['#d66641', '#456f8c', '#233d31', '#ddbb73'];
 export function freshRecipe(ids: string[] = []): Recipe {
   return { version: 1, templateVersion: 1, template: 'mosaic', assetIds: [...new Set(ids)].slice(0, 16), parameters: {}, seed: 1701,
-    palette: DEFAULT_PALETTE, paletteLocked: false, title: '', titleEnabled: false, materialPhase: .35 };
+    palette: DEFAULT_PALETTE, paletteLocked: false, title: '', titleEnabled: false, materialPhase: .35,weightMode:'equal',assetStats:{},sourceOrder:[...new Set(ids)].slice(0,16) };
 }
 interface EditorFrame { recipe: Recipe; snapshot?: SourceSnapshot }
 interface EditorState {
@@ -43,14 +43,17 @@ export const useEditor = create<EditorState>((set, get) => ({
     const retained = Object.fromEntries(Object.entries(assets).filter(([id]) => referenced.has(id)));
     if (Object.values(retained).reduce((sum, a) => sum + a.bytes + a.thumbnail.size, 0) > LIMITS.candidateBytes) throw new Error('RESPONSE_TOO_LARGE');
     set({ assets: retained });
-    state.update({ assetIds: ids, palette: state.recipe.paletteLocked ? state.recipe.palette : incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8).length ? incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8) : DEFAULT_PALETTE }, snapshot);
+    const assetStats=Object.fromEntries(ids.flatMap(id=>{const statistics=incoming.find(a=>a.id===id)?.statistics||state.recipe.assetStats[id]||assets[id]?.statistics;return statistics?[[id,statistics]]:[];}));
+    state.update({ assetIds: ids,assetStats,sourceOrder:replace?ids:[...new Set([...state.recipe.sourceOrder.filter(id=>ids.includes(id)),...ids])], palette: state.recipe.paletteLocked ? state.recipe.palette : incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8).length ? incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8) : DEFAULT_PALETTE }, snapshot);
   },
   load(recipe, incoming, snapshot) { RecipeSchema.parse(recipe); const assets = Object.fromEntries(incoming.map(a => [a.id, a]));
     if(incoming.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size,0)>LIMITS.candidateBytes)throw new Error('RESPONSE_TOO_LARGE');
     if (recipe.assetIds.some(id => !assets[id])) throw new Error('INVALID_PACKAGE');
     set({ recipe: structuredClone(recipe), assets, snapshot, past: [], future: [], gesture: undefined, revision: get().revision + 1 }); },
   select(id) { const state = get(); if (!state.assets[id]) return;
-    state.update({ assetIds: state.recipe.assetIds.includes(id) ? state.recipe.assetIds.filter(value => value !== id) : [...state.recipe.assetIds, id].slice(0, 16) }); },
+    const ids = state.recipe.assetIds.includes(id) ? state.recipe.assetIds.filter(value => value !== id) : [...state.recipe.assetIds, id].slice(0, 16);
+    const sourceOrder=[...new Set([...state.recipe.sourceOrder.filter(key=>ids.includes(key)),...ids])];
+    state.update({ assetIds: ids, sourceOrder, assetStats:Object.fromEntries(ids.flatMap(key=>{const value=state.recipe.assetStats[key]||state.assets[key]?.statistics;return value?[[key,value]]:[];})) }); },
   reorder(index, direction) { const state = get(), ids = [...state.recipe.assetIds], next = index + direction;
     if (next < 0 || next >= ids.length) return; [ids[index], ids[next]] = [ids[next]!, ids[index]!]; state.update({ assetIds: ids }); },
   template(id) { get().update({ template: id }); },

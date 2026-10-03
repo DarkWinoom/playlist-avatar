@@ -36,6 +36,8 @@ export function createApp(config: ServerConfig) {
     if (origin && !config.allowedOrigins.has(origin)) throw new ServiceError('INVALID_INPUT', 403);
     context.header('X-Content-Type-Options', 'nosniff');
     context.header('Referrer-Policy', 'no-referrer');
+    context.header('Cross-Origin-Opener-Policy','same-origin');
+    context.header('Cross-Origin-Embedder-Policy','require-corp');
     context.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     context.header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
     await next();

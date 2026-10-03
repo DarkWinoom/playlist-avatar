@@ -3,7 +3,7 @@ import { ApiErrorSchema, CollectionSchema, LIMITS } from '@playlist-avatar/contr
 import type { Collection, ErrorCode, PublicPlatform } from '@playlist-avatar/contracts';
 import { imageInfo } from '@playlist-avatar/artwork';
 
-export interface Candidate { key: string; label: string; status: 'ready' | 'missing' | 'budget'; blob?: Blob;
+export interface Candidate { key: string; label: string; status: 'ready' | 'missing' | 'budget'; blob?: Blob;order?:number;statistics?:{occurrenceCount:number;playCount?:number};
   thumbnail?: Blob; url?: string; width?: number; height?: number; colors: string[] }
 export interface ImportResult { collection: Collection; candidates: Candidate[] }
 interface ImportState { phase: 'idle' | 'reading' | 'images' | 'ready' | 'error' | 'cancelled'; error?: ErrorCode;
@@ -70,7 +70,8 @@ export function usePlaylistImport() {
       const workers = await Promise.allSettled(Array.from({ length: Math.min(3, work.length) }, async () => {
         while (next < work.length && current === version.current) {
           const index = next++, cover = work[index]!;
-          let candidate: Candidate = { key: cover.key, label: cover.label, status: 'missing', colors: [] };
+          const entries=collection.tracks.filter(t=>t.artwork?.key===cover.key),plays=entries.map(t=>t.statistics?.playCount);
+          let candidate: Candidate = { key: cover.key, label: cover.label, status: 'missing', colors: [],order:entries[0]?.order,statistics:{occurrenceCount:entries.length,...(plays.every(v=>v!==undefined)?{playCount:plays.reduce<number>((sum,v)=>Math.min(Number.MAX_SAFE_INTEGER,sum+v!),0)}:{})} };
           try {
             const image = await fetch(cover.href, { headers:token?{Authorization:`Bearer ${token}`}:{},signal: controller.signal });
             if (!image.ok) throw new ImportError('IMAGE_UNAVAILABLE');

@@ -21,3 +21,9 @@ it('deduplicates identical materials and undoes source coverage together with re
   editor.add([asset], second, true); editor.undo(); expect(useEditor.getState().snapshot?.title).toBe('First');
   editor.redo(); expect(useEditor.getState().snapshot?.title).toBe('Second'); expect(useEditor.getState().assets.a?.blob.size).toBe(1);
 });
+it('replaces a deselected source slot without losing the new source order or statistics',()=>{
+ const incoming=Array.from({length:17},(_,i)=>({id:`a${i}`,fingerprint:i.toString(16).padStart(64,'0'),blob:new Blob(['a']),thumbnail:new Blob(['a']),width:1,height:1,bytes:1,colors:['#123456'],label:`a${i}`,createdAt:new Date().toISOString(),statistics:{occurrenceCount:i+1}}));
+ const editor=useEditor.getState();editor.add(incoming.slice(0,16),undefined,true);editor.select('a4');editor.add([incoming[16]!]);
+ expect(useEditor.getState().recipe.sourceOrder).toEqual([...incoming.slice(0,16).map(a=>a.id).filter(id=>id!=='a4'),'a16']);
+ expect(Object.keys(useEditor.getState().recipe.assetStats)).toHaveLength(16);expect(useEditor.getState().recipe.assetStats.a16?.occurrenceCount).toBe(17);
+});

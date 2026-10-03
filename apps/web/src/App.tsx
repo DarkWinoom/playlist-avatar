@@ -18,6 +18,7 @@ import { browserLocale } from './i18n.ts';
 import {repository}from'./repository.ts';
 import {serializedStorage}from'./storage-coordinator.ts';
 import {AdvancedDialog}from'./components/AdvancedDialog.tsx';
+import {MaterialControls}from'./components/MaterialControls.tsx';
 import { identifyShare } from '@playlist-avatar/contracts';
 import type { ArtworkAsset, PublicPlatform, SourceSnapshot } from '@playlist-avatar/contracts';
 import { usePlaylistImport } from './import-playlist.ts';
@@ -25,6 +26,8 @@ import type { Candidate } from './import-playlist.ts';
 import { LIMITS } from '@playlist-avatar/contracts';
 import { errorMessage } from './error-messages.ts';
 import { normalizeAsset } from './assets.ts';
+import { prepareImport } from './prepare-import.ts';
+import { readEnd } from './read-range.ts';
 import { useEditor } from './editor-store.ts';
 import styles from './App.module.css';
 
@@ -55,18 +58,14 @@ export function App() {
   const lastPanel=useRef('import');function openPanel(id:'import'|'templates'|'materials'|'adjust'){lastPanel.current=id;setPanel(id);}
   useEffect(() => {
     const result = importer.result; if (!result || applied.current === result || importer.phase !== 'ready') return;
-    let cancelled = false, bytes = 0; const current = ++mutation.current, prepared: ArtworkAsset[] = [];
+    let cancelled = false; const current = ++mutation.current;
     void (async () => { try {
-      for (const candidate of result.candidates.filter(value => value.status === 'ready').slice(0, 16)) {
-        const asset = await normalizeAsset(candidate.blob!, candidate.label, false, candidate.key);
-        if (cancelled || current !== mutation.current) return; bytes += asset.bytes + asset.thumbnail.size;
-        if (bytes > LIMITS.candidateBytes / 2) throw new Error('RESPONSE_TOO_LARGE'); prepared.push(asset);
-      }
+      const {assets:prepared,skipped}=await prepareImport(result.candidates,()=>cancelled||current!==mutation.current);
       if (!cancelled && current === mutation.current && prepared.length) {
         const state = useEditor.getState(), pristine = state.revision <= 1 && !state.snapshot && state.recipe.assetIds.every(id => state.assets[id]?.label.startsWith('Original '));
         if (pristine) state.add(prepared, result.collection.snapshot, true); else setPreparedImport({ assets: prepared, snapshot: result.collection.snapshot });
-        applied.current = result; setNotice('');
-      }
+        applied.current = result; setNotice(skipped?(chinese?`已跳过 ${skipped} 张不可用或超出预算的封面`:`Skipped ${skipped} unavailable or over-budget covers`):'');
+      } else if(!cancelled&&current===mutation.current)setNotice(chinese?'封面无法准备，原作品已保留':'Covers could not be prepared; previous artwork retained');
     } catch { if (!cancelled) setNotice(chinese ? '素材准备失败，原作品已保留' : 'Material preparation failed; previous artwork retained'); } })();
     return () => { cancelled = true; };
   }, [importer.result, importer.phase]);
@@ -93,7 +92,7 @@ export function App() {
     finally { if (localInput.current) localInput.current.value = ''; }
   }
   async function chooseCandidate(candidate: Candidate) { const current = ++mutation.current; importer.cancel(); setPreparedImport(undefined);
-    try { const asset = await normalizeAsset(candidate.blob!, candidate.label, false, candidate.key); if (current === mutation.current) editor.add([asset]); }
+    try { const asset = await normalizeAsset(candidate.blob!, candidate.label, false, candidate.key); if (current === mutation.current) editor.add([{...asset,order:candidate.order,statistics:candidate.statistics}]); }
     catch { if (current === mutation.current) setNotice(chinese ? '素材预算已满，请先保存作品' : 'Material budget reached; save your artwork first'); }
   }
   const sourceControls=<>
@@ -104,13 +103,13 @@ export function App() {
         <div className="import-status" role={importer.phase === 'error' ? 'alert' : 'status'}>{importer.phase === 'reading' ? (chinese ? '正在读取…' : 'Reading…') : importer.phase === 'images' ? `${chinese ? '准备封面' : 'Preparing covers'} ${importer.prepared} / ${importer.total}` : importer.phase === 'cancelled' ? (chinese ? '已取消读取' : 'Reading cancelled') : importer.error ? errorMessage(importer.error, preferences.locale) : importer.result ? `${importer.result.collection.tracks.length} ${chinese ? '首 · ' : 'tracks · '}${importer.result.candidates.filter(value => value.status === 'ready').length} ${chinese ? '张封面' : 'covers'}` : ''}</div>
         {importer.pending && <div className="import-status">{importer.pending.collection.snapshot.title} · {chinese ? '封面不可用，可换用本地图片' : 'Covers unavailable; choose local images'}</div>}
         {preparedImport && <button className="primary-button full-width" onClick={() => { try { editor.add(preparedImport.assets, preparedImport.snapshot, true); setPreparedImport(undefined); } catch { setNotice(chinese ? '素材预算已满，请先保存作品' : 'Material budget reached; save your artwork first'); } }}>{chinese ? '应用到作品' : 'Apply to artwork'}</button>}
-        {importer.result && !importer.result.collection.snapshot.coverage.complete && <div className="import-status">{chinese ? '已读范围 ' : 'Read range '}{importer.result.collection.snapshot.coverage.offset}–{importer.result.collection.snapshot.coverage.offset + importer.result.collection.tracks.length}{importer.result.collection.snapshot.coverage.knownTotal !== undefined ? ` / ${importer.result.collection.snapshot.coverage.knownTotal}` : (chinese ? ' · 总量未确认' : ' · Total unverified')}
-          {importer.result.collection.snapshot.coverage.limitReason === 'budget' && importer.result.collection.snapshot.coverage.knownTotal !== undefined && importer.result.collection.snapshot.coverage.offset + importer.result.collection.tracks.length < importer.result.collection.snapshot.coverage.knownTotal && <button className="quiet-button" onClick={() => { const s = importer.result!.collection.snapshot; if (s.source === 'netease' || s.source === 'qqmusic') startImport(s.collectionId, s.source, s.coverage.offset + importer.result!.collection.tracks.length); }}>{chinese ? '读取下一段' : 'Read next range'}</button>}</div>}
+        {importer.result && !importer.result.collection.snapshot.coverage.complete && <div className="import-status">{chinese ? '已读范围 ' : 'Read range '}{importer.result.collection.snapshot.coverage.offset}–{readEnd(importer.result.collection.snapshot.coverage)}{importer.result.collection.snapshot.coverage.knownTotal !== undefined ? ` / ${importer.result.collection.snapshot.coverage.knownTotal}` : (chinese ? ' · 总量未确认' : ' · Total unverified')}
+          {['netease','qqmusic'].includes(importer.result.collection.snapshot.source) && importer.result.collection.snapshot.coverage.knownTotal !== undefined && readEnd(importer.result.collection.snapshot.coverage)>importer.result.collection.snapshot.coverage.offset && readEnd(importer.result.collection.snapshot.coverage) < importer.result.collection.snapshot.coverage.knownTotal && <button className="quiet-button" onClick={() => { const s = importer.result!.collection.snapshot; if (s.source === 'netease' || s.source === 'qqmusic') startImport(s.collectionId, s.source, readEnd(s.coverage)); }}>{chinese ? '读取下一段' : 'Read next range'}</button>}</div>}
         <button className="quiet-button full-width" onClick={() => localInput.current?.click()}>{chinese ? '添加本地图片' : 'Add local images'}</button><input ref={localInput} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label={chinese ? '本地图片文件' : 'Local image files'} onChange={event => void local(event.target.files)} />
         <AdvancedDialog chinese={chinese} read={advancedImport} cancel={()=>{mutation.current++;importer.cancel();setPreparedImport(undefined);}}/>
   </>;
   const materialsControls=<>
-        <div className="materials-heading"><span>{chinese ? '素材' : 'Materials'} · {editor.recipe.assetIds.length} / 16</span></div>
+        <div className="materials-heading"><span>{chinese ? '素材' : 'Materials'} · {editor.recipe.assetIds.length} / 16</span></div><MaterialControls chinese={chinese}/>
         <div className="selected-grid">{editor.recipe.assetIds.map((id, index) => <div className="selected-asset" key={id}><button aria-label={`${chinese ? '取消选择' : 'Deselect'} ${editor.assets[id]?.label}`} onClick={() => editor.select(id)}>{editor.assets[id] && <AssetImage asset={editor.assets[id]!} />}</button><div><button disabled={index === 0} aria-label={`${chinese ? '前移' : 'Move earlier'} ${index + 1}`} onClick={() => editor.reorder(index, -1)}>←</button><button disabled={index === editor.recipe.assetIds.length - 1} aria-label={`${chinese ? '后移' : 'Move later'} ${index + 1}`} onClick={() => editor.reorder(index, 1)}>→</button></div></div>)}</div>
         {!!importer.result && <details className="candidates-panel"><summary>{chinese ? '候选封面' : 'Candidate covers'}</summary><div className="candidate-grid">{importer.result.candidates.map(value => <button key={value.key} className="candidate" title={value.label} disabled={!value.blob} aria-label={`${chinese ? '添加' : 'Add'} ${value.label}`} onClick={() => void chooseCandidate(value)}>{value.url ? <img src={value.url} alt={value.label} /> : <span>{value.status === 'budget' ? (chinese ? '未准备' : 'Not prepared') : (chinese ? '缺图' : 'Missing')}</span>}</button>)}</div></details>}
   </>;

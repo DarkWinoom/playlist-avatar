@@ -12,6 +12,7 @@ export interface ServerConfig {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+  try {
   const port = Number(env.PORT || 8080);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid PORT');
   const publicURL = new URL(env.PUBLIC_ORIGIN || `http://127.0.0.1:${port}`);
@@ -41,4 +42,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     publicOrigin: publicURL.origin, allowedOrigins: origins, allowedHosts: hosts,
     staticRoot: env.STATIC_DIR || fileURLToPath(new URL('../../web/dist/', import.meta.url)),
     lastfmKey: env.LASTFM_API_KEY || undefined, advancedProfiles: profiles };
+  }catch{throw new Error('Invalid deployment configuration');}
 }

@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
-import { CATALOG, FEATURED, render, prepareRenderer, imageProjections } from '@playlist-avatar/artwork';
+import { CATALOG, FEATURED, render, prepareRenderer, imageProjections, artworkWeights } from '@playlist-avatar/artwork';
 import type { RenderImage } from '@playlist-avatar/artwork';
 import type { TemplateId } from '@playlist-avatar/contracts';
 import { TEMPLATE_IDS } from '@playlist-avatar/contracts';
@@ -11,7 +11,7 @@ function Thumb({ id, active }: { id: TemplateId; active: boolean }) {
   const canvas=useRef<HTMLCanvasElement>(null),editor=useEditor();
   useEffect(()=>{if(!active)return;let cancelled=false;const images=new Map<string,RenderImage>();
     void(async()=>{try{await prepareRenderer(id);const recipe={...editor.recipe,template:id};for(const [key]of imageProjections(recipe,128)){const asset=editor.assets[key];if(!asset)continue;const image=await createImageBitmap(asset.thumbnail);if(cancelled){image.close();return;}images.set(key,{image,width:image.width,height:image.height});}
-      if(!cancelled){const c=canvas.current!;c.width=c.height=128;render(c.getContext('2d')!,128,recipe,images);}}
+      if(!cancelled){const c=canvas.current!;c.width=c.height=128;render(c.getContext('2d')!,128,recipe,images,undefined,false,artworkWeights(recipe,editor.assets));}}
       catch{}finally{images.forEach(v=>(v.image as ImageBitmap).close());}})();return()=>{cancelled=true;};
   },[active,id,editor.recipe,editor.assets]);
   return <span className="template-thumb"><img src={`/templates/${id}.png`} alt="" loading="lazy" /><canvas ref={canvas} style={{opacity:active?1:0}} aria-hidden="true" /></span>;

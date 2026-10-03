@@ -34,7 +34,7 @@ function collection(session:Session,id:string,title:string,kind:SourceSnapshot['
 export class AdvancedSources {
   private sessions=new Map<string,Session>();
   private config:ServerConfig;constructor(config:ServerConfig){this.config=config;}
-  require(id:string|undefined,owner:string|undefined){const session=id?this.sessions.get(id):undefined;if(!session||!owner||session.owner!==owner||session.expires<=Date.now()){if(id&&session?.expires&&session.expires<=Date.now())this.sessions.delete(id);throw new ServiceError('CONNECTION_REQUIRED',403);}return session;}
+  require(id:string|undefined,owner:string|undefined){const session=id?this.sessions.get(id):undefined;if(!session||!owner||session.owner!==owner||session.expires<=Date.now()){if(id&&session?.expires&&session.expires<=Date.now()){session.controller.abort(new ServiceError('CONNECTION_REQUIRED',403));this.sessions.delete(id);}throw new ServiceError('CONNECTION_REQUIRED',403);}return session;}
   disconnect(id:string|undefined,owner:string|undefined){const session=this.require(id,owner);session.controller.abort(new ServiceError('CONNECTION_REQUIRED',403));this.sessions.delete(session.id);}
   policy(session:Session):ArtworkPolicy{return {...profilePolicy(session.profile),headers:session.profile.kind==='jellyfin'?jellyHeaders(session):session.profile.kind==='netease-api'&&session.cookie?{Cookie:session.cookie}:undefined};}
   artworkPolicy(session:Session):ArtworkPolicy{return session.profile.kind==='netease-api'?{allowed:artworkHost('netease')}:this.policy(session);}
@@ -60,7 +60,7 @@ export class AdvancedSources {
       session.username=text(profileInfo.nickname)||input.username;session.serverVersion=profile.implementation;
     }
     session.namespace=`${profile.id}:${createHash('sha256').update(session.principal).digest('hex').slice(0,24)}`;
-    for(const[id,record]of this.sessions)if(record.expires<=Date.now())this.sessions.delete(id);if(this.sessions.size>=128)throw new ServiceError('RATE_LIMITED',429,2000);this.sessions.set(session.id,session);
+    for(const[id,record]of this.sessions)if(record.expires<=Date.now()){record.controller.abort(new ServiceError('CONNECTION_REQUIRED',403));this.sessions.delete(id);}if(this.sessions.size>=128)throw new ServiceError('RATE_LIMITED',429,2000);this.sessions.set(session.id,session);
     return {token:session.id,profileId:profile.id,username:session.username,version:session.serverVersion,expiresAt:new Date(session.expires).toISOString()};
   }
   async list(session:Session,signal:AbortSignal,deadline:number){

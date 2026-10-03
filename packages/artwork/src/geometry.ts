@@ -33,6 +33,7 @@ export function geometry(recipe: Recipe): Tile[] {
     y: gap + cell / 2 + Math.floor(i / columns) * (cell + gap), width: cell, height: cell, angle: 0, radius, alpha: 1 }));
 }
 export function interpolateTiles(from: Tile[], to: Tile[], amount: number): Tile[] {
+  amount = Math.max(0, Math.min(1, amount));
   const old = new Map(from.map(tile => [tile.id, tile]));
   return to.map(target => { const start = old.get(target.id) || { ...target, alpha: 0 }; const tile = { ...target };
     for (const field of ['x', 'y', 'width', 'height', 'angle', 'radius', 'alpha'] as const) tile[field] = start[field] + (target[field] - start[field]) * amount;
