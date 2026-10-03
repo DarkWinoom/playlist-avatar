@@ -1,0 +1,25 @@
+{
+  "name": "playlist-avatar",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "pnpm --filter @playlist-avatar/web build && pnpm --filter @playlist-avatar/server build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "5.0.3",
+    "esbuild": "0.28.2",
+    "@types/node": "24.19.1",
+    "playwright": "1.63.0"
+  }
+}

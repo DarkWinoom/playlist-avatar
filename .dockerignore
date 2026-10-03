@@ -1,0 +1,15 @@
+.git
+.local-*
+AGENTS.md
+node_modules
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+**/dist
+coverage
+test-results
+playwright-report
+.env
+.env.*
+*.log
+releases
