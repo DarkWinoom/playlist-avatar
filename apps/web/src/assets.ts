@@ -14,9 +14,9 @@ export async function normalizeAsset(blob: Blob, label: string, local = false, s
     const scale = Math.min(1, 2048 / Math.max(info.width, info.height));
     const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image', resizeWidth: Math.max(1, Math.round(info.width * scale)),
       resizeHeight: Math.max(1, Math.round(info.height * scale)), resizeQuality: 'high' });
-    const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
+    const canvas = typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(bitmap.width,bitmap.height):document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
     try {
-      const context = canvas.getContext('2d'); if (!context) throw new Error('INVALID_IMAGE');
+      const context = canvas.getContext('2d') as CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D|null; if (!context) throw new Error('INVALID_IMAGE');
       context.drawImage(bitmap, 0, 0); bitmap.close();
       const normalized = await canvasBlob(canvas);
       const width = canvas.width, height = canvas.height;
@@ -38,7 +38,8 @@ export async function normalizeAsset(blob: Blob, label: string, local = false, s
     } finally { bitmap.close(); canvas.width = 0; canvas.height = 0; }
   } finally { release(); }
 }
-export function canvasBlob(canvas: HTMLCanvasElement, type = 'image/png', quality?: number) {
+export function canvasBlob(canvas: HTMLCanvasElement|OffscreenCanvas, type = 'image/png', quality?: number) {
+  if('convertToBlob'in canvas)return canvas.convertToBlob({type,quality});
   return new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('UNSUPPORTED_FORMAT')), type, quality));
 }
 export async function originalAssets(): Promise<ArtworkAsset[]> {

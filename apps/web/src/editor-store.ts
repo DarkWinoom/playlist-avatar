@@ -46,6 +46,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     state.update({ assetIds: ids, palette: state.recipe.paletteLocked ? state.recipe.palette : incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8).length ? incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8) : DEFAULT_PALETTE }, snapshot);
   },
   load(recipe, incoming, snapshot) { RecipeSchema.parse(recipe); const assets = Object.fromEntries(incoming.map(a => [a.id, a]));
+    if(incoming.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size,0)>LIMITS.candidateBytes)throw new Error('RESPONSE_TOO_LARGE');
     if (recipe.assetIds.some(id => !assets[id])) throw new Error('INVALID_PACKAGE');
     set({ recipe: structuredClone(recipe), assets, snapshot, past: [], future: [], gesture: undefined, revision: get().revision + 1 }); },
   select(id) { const state = get(); if (!state.assets[id]) return;

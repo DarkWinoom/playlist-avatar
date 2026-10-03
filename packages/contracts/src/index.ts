@@ -80,6 +80,9 @@ export type Collection = z.infer<typeof CollectionSchema>;
 export const ResolveInputSchema = z.object({ input: z.string().min(1).refine(value => new TextEncoder().encode(value).length <= LIMITS.shareBytes),
   source: z.enum(['netease', 'qqmusic']).optional(), offset: count.default(0) });
 export type ResolveInput = z.infer<typeof ResolveInputSchema>;
+export const LastfmInputSchema=z.object({username:z.string().regex(/^[\w-]{1,64}$/),kind:z.enum(['top-albums','recent-tracks']),period:z.enum(['7day','1month','3month','6month','12month','overall']).default('1month')}).strict();
+export const ConnectInputSchema=z.object({profileId:z.string().regex(/^[\w-]{1,64}$/),username:z.string().min(1).max(128),password:z.string().max(1024),cookie:z.string().max(8192).optional()}).strict();
+export const AdvancedInputSchema=z.object({kind:z.enum(['playlist','recent-albums','frequent-albums']),collectionId:z.string().max(128).optional(),offset:count.default(0)}).strict();
 const parameter = z.union([z.number().finite(), z.boolean(), z.string().max(128)]);
 export const RecipeSchema = z.object({ version: z.literal(1), template: TemplateSchema, templateVersion: z.literal(1),
   assetIds: z.array(key).max(LIMITS.selected).refine(ids => new Set(ids).size === ids.length), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
@@ -95,6 +98,8 @@ export const ProjectSchema = z.object({ version: z.literal(1), id: key, name: z.
   createdAt: date, updatedAt: date, recipe: RecipeSchema, snapshot: SourceSnapshotSchema.optional() });
 export type Project = z.infer<typeof ProjectSchema>;
 export interface StoredProject extends Project { thumbnail?: Blob }
+export const PackageManifestSchema=z.object({format:z.literal('playlist-avatar'),version:z.union([z.literal(0),z.literal(1)]),project:z.unknown(),
+  assets:z.array(AssetMetadataSchema.extend({image:z.string(),thumbnail:z.string()}).strict()).max(LIMITS.selected)}).strict();
 
 export const ConnectionProfileSchema = z.object({ id: key, kind: z.enum(['subsonic', 'jellyfin', 'netease-api', 'qq-api']),
   name: z.string().min(1).max(120), implementation: z.string().max(128), address: z.string().max(2048).refine(value => {
@@ -106,7 +111,7 @@ export type ConnectionProfile = z.infer<typeof ConnectionProfileSchema>;
 export const CapabilitiesSchema = z.object({ version: z.literal(CONTRACT_VERSION),
   limits: z.object({ metadata: count, candidates: count, selected: count }),
   sources: z.array(z.object({ id: SourceSchema, state: z.enum(['available', 'unconfigured', 'disabled', 'unsupported']) })).max(6),
-  profiles: z.array(z.object({ id: key, kind: z.enum(['subsonic', 'jellyfin', 'netease-api', 'qq-api']), name: text })).max(16) });
+  profiles: z.array(z.object({ id: key, kind: z.enum(['subsonic', 'jellyfin', 'netease-api', 'qq-api']), name: text,implementation:z.string().max(128).optional() })).max(16) });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 export const ApiErrorSchema = z.object({ version: z.literal(CONTRACT_VERSION), error: z.object({
   code: ErrorCodeSchema, retryable: z.boolean(), retryAfterMs: count.optional() }) });

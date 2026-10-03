@@ -8,7 +8,7 @@ export interface ServerConfig {
   allowedHosts: Set<string>;
   staticRoot: string;
   lastfmKey?: string;
-  advancedProfiles: Array<{ id: string; kind: 'subsonic' | 'jellyfin' | 'netease-api' | 'qq-api'; name: string; baseUrl: string; allowPrivate: boolean }>;
+  advancedProfiles: Array<{ id: string; kind: 'subsonic' | 'jellyfin' | 'netease-api' | 'qq-api'; name: string; baseUrl: string; allowPrivate: boolean;implementation:string }>;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -34,7 +34,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('Invalid service address');
       if (profiles.some(profile => profile.id === p.id)) throw new Error('Repeated service profile');
       profiles.push({ id: p.id, name: p.name.slice(0, 120), kind: p.kind as ServerConfig['advancedProfiles'][number]['kind'],
-        baseUrl: url.href.replace(/\/$/, ''), allowPrivate: p.allowPrivate === true });
+        baseUrl: url.href.replace(/\/$/, ''), allowPrivate: p.allowPrivate === true,implementation:typeof p.implementation==='string'?p.implementation.slice(0,128):p.kind==='subsonic'?'OpenSubsonic 1.16.1':p.kind==='jellyfin'?'Jellyfin 12.1.0':p.kind==='netease-api'?'Netease Enhanced a91ea':'QQMusicApi 13b08 (private sessions unverified)' });
     }
   }
   return { port, host: env.HOST || (env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),

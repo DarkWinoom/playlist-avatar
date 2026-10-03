@@ -11,17 +11,23 @@ import { AnimatedName } from './components/AnimatedName.tsx';
 import { CATALOG } from '@playlist-avatar/artwork';
 import { MotionConfig } from 'motion/react';
 import { MobileSheet,useCompact } from './components/MobileSheet.tsx';
+import { LibraryDialog } from './components/LibraryDialog.tsx';
+import { ClearDataDialog } from './components/ClearDataDialog.tsx';
+import { useWorkspacePersistence } from './workspace-persistence.ts';
+import { browserLocale } from './i18n.ts';
+import {repository}from'./repository.ts';
+import {serializedStorage}from'./storage-coordinator.ts';
+import {AdvancedDialog}from'./components/AdvancedDialog.tsx';
 import { identifyShare } from '@playlist-avatar/contracts';
 import type { ArtworkAsset, PublicPlatform, SourceSnapshot } from '@playlist-avatar/contracts';
 import { usePlaylistImport } from './import-playlist.ts';
 import type { Candidate } from './import-playlist.ts';
 import { LIMITS } from '@playlist-avatar/contracts';
 import { errorMessage } from './error-messages.ts';
-import { normalizeAsset, originalAssets } from './assets.ts';
-import { useEditor, freshRecipe } from './editor-store.ts';
+import { normalizeAsset } from './assets.ts';
+import { useEditor } from './editor-store.ts';
 import styles from './App.module.css';
 
-let example: Promise<ArtworkAsset[]> | undefined;
 function AssetImage({ asset }: { asset: ArtworkAsset }) {
   const [url, setUrl] = useState('');
   useEffect(() => { const next = URL.createObjectURL(asset.thumbnail); setUrl(next); return () => URL.revokeObjectURL(next); }, [asset.thumbnail]);
@@ -35,12 +41,18 @@ export function App() {
   const mutation = useRef(0); const [preparedImport, setPreparedImport] = useState<{ assets: ArtworkAsset[]; snapshot: SourceSnapshot }>();
   const importer = usePlaylistImport(), editor = useEditor();
   const chinese = preferences.locale === 'zh-CN', busy = importer.phase === 'reading' || importer.phase === 'images';
+  const persistence=useWorkspacePersistence(chinese,mutation),[clearData,setClearData]=useState(false);
+  async function openProject(id:string){mutation.current++;importer.cancel();setPreparedImport(undefined);await persistence.open(id);}
+  async function importPackage(file:Blob,signal:AbortSignal){const token=++mutation.current,revision=useEditor.getState().revision;importer.cancel();setPreparedImport(undefined);persistence.cancelWrites();
+    const controller=new AbortController(),abort=()=>controller.abort();if(signal.aborted)abort();signal.addEventListener('abort',abort,{once:true});
+    const unsubscribe=useEditor.subscribe(state=>{if(state.revision!==revision)controller.abort();});
+    try{const {restorePackage}=await import('./project-package.ts');const value=await restorePackage(file,controller.signal);if(controller.signal.aborted||token!==mutation.current||revision!==useEditor.getState().revision)throw new Error('CANCELLED');
+      const now=new Date().toISOString(),project={...value.project,id:`project:${crypto.randomUUID()}`,createdAt:now,updatedAt:now};await serializedStorage(()=>{if(controller.signal.aborted||token!==mutation.current||revision!==useEditor.getState().revision)throw new Error('CANCELLED');return repository().save(project,value.assets,undefined,LIMITS.projectBytes,controller.signal);});
+      if(!controller.signal.aborted&&token===mutation.current&&revision===useEditor.getState().revision){unsubscribe();editor.load(project.recipe,value.assets,project.snapshot);persistence.setCurrent(project);}
+    }finally{unsubscribe();signal.removeEventListener('abort',abort);}}
   const t = translator(preferences.locale);
   const compact=useCompact();const [panel,setPanel]=useState<'import'|'templates'|'materials'|'adjust'>();
   const lastPanel=useRef('import');function openPanel(id:'import'|'templates'|'materials'|'adjust'){lastPanel.current=id;setPanel(id);}
-  useEffect(() => { let cancelled = false; example ??= originalAssets(); void example.then(assets => {
-    if (!cancelled && !useEditor.getState().recipe.assetIds.length && !useEditor.getState().revision) useEditor.getState().load(freshRecipe(assets.map(a=>a.id)), assets);
-  }); return () => { cancelled = true; }; }, []);
   useEffect(() => {
     const result = importer.result; if (!result || applied.current === result || importer.phase !== 'ready') return;
     let cancelled = false, bytes = 0; const current = ++mutation.current, prepared: ArtworkAsset[] = [];
@@ -66,6 +78,7 @@ export function App() {
   }, []);
   let ambiguous = false; try { ambiguous = identifyShare(share).kind === 'platform'; } catch {}
   function startImport(input: string, source?: PublicPlatform, offset = 0) { mutation.current++; setPreparedImport(undefined); void importer.start(input, source, offset); }
+  async function advancedImport(route:string,body:unknown,token?:string){mutation.current++;setPreparedImport(undefined);await importer.request(route,body,token);}
   function read() { let input = share;
     try { const parsed = identifyShare(share, platform); if (parsed.kind === 'short') input = parsed.url;
       else if (parsed.kind === 'playlist') { startImport(parsed.id, parsed.source); return; } } catch {}
@@ -94,6 +107,7 @@ export function App() {
         {importer.result && !importer.result.collection.snapshot.coverage.complete && <div className="import-status">{chinese ? '已读范围 ' : 'Read range '}{importer.result.collection.snapshot.coverage.offset}–{importer.result.collection.snapshot.coverage.offset + importer.result.collection.tracks.length}{importer.result.collection.snapshot.coverage.knownTotal !== undefined ? ` / ${importer.result.collection.snapshot.coverage.knownTotal}` : (chinese ? ' · 总量未确认' : ' · Total unverified')}
           {importer.result.collection.snapshot.coverage.limitReason === 'budget' && importer.result.collection.snapshot.coverage.knownTotal !== undefined && importer.result.collection.snapshot.coverage.offset + importer.result.collection.tracks.length < importer.result.collection.snapshot.coverage.knownTotal && <button className="quiet-button" onClick={() => { const s = importer.result!.collection.snapshot; if (s.source === 'netease' || s.source === 'qqmusic') startImport(s.collectionId, s.source, s.coverage.offset + importer.result!.collection.tracks.length); }}>{chinese ? '读取下一段' : 'Read next range'}</button>}</div>}
         <button className="quiet-button full-width" onClick={() => localInput.current?.click()}>{chinese ? '添加本地图片' : 'Add local images'}</button><input ref={localInput} className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label={chinese ? '本地图片文件' : 'Local image files'} onChange={event => void local(event.target.files)} />
+        <AdvancedDialog chinese={chinese} read={advancedImport} cancel={()=>{mutation.current++;importer.cancel();setPreparedImport(undefined);}}/>
   </>;
   const materialsControls=<>
         <div className="materials-heading"><span>{chinese ? '素材' : 'Materials'} · {editor.recipe.assetIds.length} / 16</span></div>
@@ -102,19 +116,20 @@ export function App() {
   </>;
   return <MotionConfig reducedMotion={effectiveReduced?'always':'user'}><div className={styles.app}>
     <header className={styles.header}><div className={styles.brand}><Icon name="grid" /><span>Playlist Avatar</span></div>
-      <div className={styles.headerActions}><span className={styles.sourceBadge}>{editor.snapshot?.title || t('example')}</span><ExportDialog chinese={chinese} /><PreferencesDialog value={preferences} onChange={setPreferences} /></div></header>
+      <div className={styles.headerActions}><span className={styles.sourceBadge}>{persistence.current?.name||editor.snapshot?.title || t('example')}</span><LibraryDialog chinese={chinese} save={persistence.save} open={openProject} current={persistence.current} onClear={()=>setClearData(true)} importPackage={importPackage}/><ExportDialog chinese={chinese} name={persistence.current?.name}/><PreferencesDialog value={preferences} onChange={setPreferences} /></div></header>
     <main className={styles.workspace}>
       {!compact&&<aside className={styles.left}><h1>{t('create')}</h1>{sourceControls}
         <TemplateLibrary chinese={chinese} reduce={effectiveReduced} />
       </aside>}
-      <section className={styles.stage} aria-label={chinese ? '作品预览' : 'Artwork preview'}><div className={styles.stageLabel}><AnimatedName value={CATALOG.find(item=>item.id===editor.recipe.template)!.en} reduce={effectiveReduced} /><span>{t('unsaved')}</span></div>
+      <section className={styles.stage} aria-label={chinese ? '作品预览' : 'Artwork preview'}><div className={styles.stageLabel}><AnimatedName value={CATALOG.find(item=>item.id===editor.recipe.template)!.en} reduce={effectiveReduced} /><span role="status">{persistence.label}</span></div>
         <ArtworkCanvas recipe={editor.recipe} assets={editor.assets} reduce={effectiveReduced} circle={circle} direct={!!editor.gesture} checks={checks} />
         <div className="canvas-toolbar"><div className="segmented"><button aria-pressed={!circle} onClick={() => setCircle(false)}>{chinese ? '方形' : 'Square'}</button><button aria-pressed={circle} onClick={() => setCircle(true)}>{chinese ? '圆形' : 'Circle'}</button></div><button disabled={!editor.past.length} onClick={editor.undo}>{chinese ? '撤销' : 'Undo'}</button><button disabled={!editor.future.length} onClick={editor.redo}>{chinese ? '重做' : 'Redo'}</button></div>
-        <button className="quiet-button" aria-pressed={checks} onClick={()=>setChecks(!checks)}>{chinese?'头像检查':'Avatar check'}</button><p role="status" className="import-status">{notice}</p>
+        <button className="quiet-button" aria-pressed={checks} onClick={()=>setChecks(!checks)}>{chinese?'头像检查':'Avatar check'}</button><p role={persistence.error?'alert':'status'} className="import-status">{persistence.error||notice}</p>
         {!compact&&materialsControls}
       </section>
       {!compact&&<aside className={styles.right}><Adjustments chinese={chinese} /></aside>}
       {compact&&<><nav className="mobile-nav" aria-label={chinese?'工作区工具':'Workspace tools'}>{(['import','templates','materials','adjust'] as const).map((id,i)=><button key={id} data-mobile-panel={id} aria-expanded={panel===id} onClick={()=>openPanel(id)}>{(chinese?['导入','模板','素材','调整']:['Import','Templates','Materials','Adjust'])[i]}</button>)}</nav><MobileSheet returnFocus={()=>document.querySelector<HTMLButtonElement>(`[data-mobile-panel="${lastPanel.current}"]`)?.focus({preventScroll:true})} closeLabel={chinese?"关闭":"Close"} open={!!panel} close={()=>setPanel(undefined)} title={(chinese?{import:'导入',templates:'模板',materials:'素材',adjust:'调整'}:{import:'Import',templates:'Templates',materials:'Materials',adjust:'Adjust'})[panel||'import']} reduce={effectiveReduced}>{panel==='import'?sourceControls:panel==='templates'?<TemplateLibrary chinese={chinese} reduce={effectiveReduced}/>:panel==='materials'?materialsControls:<Adjustments chinese={chinese}/>}</MobileSheet></>}
     </main>
+    <ClearDataDialog open={clearData} close={()=>setClearData(false)} chinese={chinese} clear={async scopes=>{mutation.current++;importer.cancel();setPreparedImport(undefined);await persistence.clear(scopes);}} resetSettings={()=>{localStorage.removeItem('playlist-avatar:favorites');window.dispatchEvent(new Event('playlist-avatar:reset-favorites'));localStorage.removeItem('playlist-avatar.preferences.v1');setPreferences({locale:browserLocale(),theme:'system',reduceMotion:false});}}/>
   </div></MotionConfig>;
 }

@@ -18,7 +18,7 @@ export async function renderExport(recipe: Recipe, assets: ArtworkAsset[], optio
       const image = await createImageBitmap(asset.blob, { resizeWidth: Math.max(1, Math.round(asset.width * ratio)), resizeHeight: Math.max(1, Math.round(asset.height * ratio)), resizeQuality: 'high' });
       images.set(asset.id, { image, width: image.width, height: image.height });
     }
-    render(context, options.size, recipe, images);
+    render(context, options.size, recipe, images,undefined,options.transparent&&options.format!=='image/jpeg');
     if (options.circle) { context.globalCompositeOperation = 'destination-in'; context.beginPath(); context.arc(options.size / 2, options.size / 2, options.size / 2, 0, Math.PI * 2); context.fill(); context.globalCompositeOperation = 'source-over'; }
     if (options.format === 'image/jpeg' || !options.transparent) { context.globalCompositeOperation = 'destination-over'; context.fillStyle = options.background; context.fillRect(0, 0, options.size, options.size); context.globalCompositeOperation = 'source-over'; }
     const blob = 'convertToBlob' in canvas ? await canvas.convertToBlob({ type: options.format, quality: options.quality }) : await canvasBlob(canvas, options.format, options.quality);

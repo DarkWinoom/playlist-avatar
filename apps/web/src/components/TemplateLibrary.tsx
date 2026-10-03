@@ -20,6 +20,7 @@ export function TemplateLibrary({ chinese, reduce }: { chinese:boolean;reduce:bo
   const editor=useEditor(),[filter,setFilter]=useState('featured'),[search,setSearch]=useState(''),[focused,setFocused]=useState<TemplateId>();
   const [favorites,setFavorites]=useState<TemplateId[]>(()=>{try{const parsed=JSON.parse(localStorage.getItem('playlist-avatar:favorites')||'[]');return Array.isArray(parsed)?parsed.filter(v=>TEMPLATE_IDS.includes(v)):[];}catch{return[];}});
   useEffect(()=>{try{localStorage.setItem('playlist-avatar:favorites',JSON.stringify(favorites));}catch{}},[favorites]);
+  useEffect(()=>{const reset=()=>setFavorites([]);window.addEventListener('playlist-avatar:reset-favorites',reset);return()=>window.removeEventListener('playlist-avatar:reset-favorites',reset);},[]);
   const labels=chinese?['精选','全部16','收藏','封面','印刷','抽象','材质']:['Featured','All 16','Favorites','Covers','Print','Abstract','Material'];
   const keys=['featured','all','favorites','0','1','2','3'];
   const items=CATALOG.filter(item=>(search.trim()?true:filter==='featured'?FEATURED.includes(item.id):filter==='all'?true:filter==='favorites'?favorites.includes(item.id):item.group===Number(filter))&&`${item.en} ${item.zh}`.toLowerCase().includes(search.trim().toLowerCase()));

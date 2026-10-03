@@ -14,24 +14,24 @@ export function cover(c: DrawingContext, image: RenderImage, x: number, y: numbe
   const ratio = Math.max(width / image.width, height / image.height), sw = width / ratio, sh = height / ratio;
   c.drawImage(image.image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, x, y, width, height);
 }
-export function render(c: DrawingContext, size: number, recipe: Recipe, images: Map<string, RenderImage>, tiles = geometry(recipe)) {
+export function render(c: DrawingContext, size: number, recipe: Recipe, images: Map<string, RenderImage>, tiles = geometry(recipe), transparent=false) {
   c.clearRect(0, 0, size, size); c.save(); c.scale(size, size);
   const color = recipe.palette[0] || '#e7e1d5';
   const paper = `#${[1, 3, 5].map(i => Math.round(parseInt(color.slice(i, i + 2), 16) * .2 + 244 * .8).toString(16).padStart(2, '0')).join('')}`;
-  c.fillStyle = recipe.parameters[recipe.template]?.background as string || paper; c.fillRect(0, 0, 1, 1);
+  if(!transparent){c.fillStyle = recipe.parameters[recipe.template]?.background as string || paper; c.fillRect(0, 0, 1, 1);}
   if (recipe.template === 'disc') {
     const radius=parameter(recipe,'scale',65)/200,x=parameter(recipe,'offset',55)/100+(seeded(recipe.seed)()-.5)*.04;
     const gradient=c.createRadialGradient(x-.1,.4,.03,x,.5,radius);gradient.addColorStop(0,'#4c5055');gradient.addColorStop(.5,'#111318');gradient.addColorStop(1,'#050609');c.fillStyle=gradient;c.beginPath();c.arc(x,.5,radius,0,Math.PI*2);c.fill();
     c.strokeStyle=`rgba(210,218,230,${parameter(recipe,'texture',55)/500})`;c.lineWidth=.0015;for(let r=.06;r<radius;r+=.007){c.beginPath();c.arc(x,.5,r,0,Math.PI*2);c.stroke();}
     c.fillStyle=recipe.palette[0]!;c.beginPath();c.arc(x,.5,.07,0,Math.PI*2);c.fill();c.fillStyle='#f4f2ed';c.beginPath();c.arc(x,.5,.008,0,Math.PI*2);c.fill();
   }
-  if (recipe.template === 'film') { c.fillStyle='#21241f';c.fillRect(0,0,1,1);c.filter=`brightness(${.6+parameter(recipe,'exposure',50)/100})`; }
+  if (recipe.template === 'film') { c.fillStyle='#21241f';if(!transparent)c.fillRect(0,0,1,1);else{c.fillRect(0,0,.15,1);c.fillRect(.85,0,.15,1);}c.filter=`brightness(${.6+parameter(recipe,'exposure',50)/100})`; }
   const group=CATALOG.find(item=>item.id===recipe.template)!.group;
   if(group===0||recipe.template==='film') drawTiles(c,tiles,images,recipe.palette,size);
   c.filter='none';
   if(group===1) printed(c,recipe,images);
-  if(group===2) generated(c,recipe);
-  if(group===3) { if (!materials) throw new Error('Renderer not prepared'); materials.renderMaterial(c,recipe,images,size); }
+  if(group===2) generated(c,recipe,transparent);
+  if(group===3) { if (!materials) throw new Error('Renderer not prepared'); materials.renderMaterial(c,recipe,images,size,transparent); }
   if (!tiles.length && group===0) { c.fillStyle = recipe.palette[0]!; c.fillRect(.15, .15, .7, .7); }
   if (recipe.titleEnabled && recipe.title) { c.fillStyle = '#111'; c.fillRect(0, .82, 1, .18); c.fillStyle = '#fff'; c.textAlign = 'center';
     c.font = '600 .065px "Segoe UI", "Microsoft YaHei", sans-serif'; c.fillText(recipe.title.slice(0, 35), .5, .92, .85); }

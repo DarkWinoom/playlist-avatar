@@ -45,15 +45,19 @@ export function usePlaylistImport() {
   const task = useRef<AbortController | undefined>(undefined);
   const retained = useRef<string[]>([]);
   useEffect(() => () => { version.current++; task.current?.abort(); retained.current.forEach(URL.revokeObjectURL); }, []);
-  function cancel() { version.current++; task.current?.abort(); setState(previous => ({ ...previous, phase: 'cancelled', error: undefined })); }
+  function cancel() { version.current++; task.current?.abort(); setState(previous => previous.phase==='reading'||previous.phase==='images'?({ ...previous, phase: 'cancelled', error: undefined }):previous); }
   async function start(input: string, source?: PublicPlatform, offset = 0) {
+    return request('/api/v1/resolve',{input,source,offset});
+  }
+  async function request(route:string,body:unknown,token?:string) {
     const current = ++version.current; task.current?.abort();
     const controller = new AbortController(); task.current = controller;
     const created: string[] = []; let committed = false;
     setState(previous => ({ ...previous, phase: 'reading', error: undefined, pending: undefined, prepared: 0, total: 0 }));
     try {
-      const response = await fetch('/api/v1/resolve', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input, source, offset }), signal: controller.signal });
+      const headers:Record<string,string>={'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})};
+      const response = await fetch(route, { method: 'POST', headers,
+        body: JSON.stringify(body), signal: controller.signal });
       if (!response.ok) await readError(response);
       const collection = CollectionSchema.parse(await response.json());
       if (current !== version.current) return;
@@ -68,7 +72,7 @@ export function usePlaylistImport() {
           const index = next++, cover = work[index]!;
           let candidate: Candidate = { key: cover.key, label: cover.label, status: 'missing', colors: [] };
           try {
-            const image = await fetch(cover.href, { signal: controller.signal });
+            const image = await fetch(cover.href, { headers:token?{Authorization:`Bearer ${token}`}:{},signal: controller.signal });
             if (!image.ok) throw new ImportError('IMAGE_UNAVAILABLE');
             const blob = await image.blob();
             if (cachedBytes + blob.size > LIMITS.candidateBytes / 2) candidate.status = 'budget';
@@ -92,5 +96,5 @@ export function usePlaylistImport() {
       error: error instanceof ImportError ? error.code : 'INTERNAL_ERROR' })); }
     finally { if (!committed) created.forEach(URL.revokeObjectURL); }
   }
-  return { ...state, start, cancel };
+  return { ...state, start, request, cancel };
 }

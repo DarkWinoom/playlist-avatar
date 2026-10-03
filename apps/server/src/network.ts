@@ -20,10 +20,10 @@ export function isPublicAddress(address: string) {
   if (family === 6) return /^[23]/i.test(address) && !denied.check(address, 'ipv6');
   return false;
 }
-export function safeTarget(input: string | URL, allowed: (host: string) => boolean) {
+export function safeTarget(input: string | URL, allowed: (host: string) => boolean,target?:(url:URL)=>boolean) {
   const url = new URL(input);
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !allowed(url.hostname)
-    || (url.port && url.port !== (url.protocol === 'https:' ? '443' : '80'))) throw new ServiceError('INVALID_INPUT', 400);
+    || (target ? !target(url) : (url.port && url.port !== (url.protocol === 'https:' ? '443' : '80')))) throw new ServiceError('INVALID_INPUT', 400);
   return url;
 }
 export interface UpstreamOptions {
@@ -34,11 +34,14 @@ export interface UpstreamOptions {
   headers?: Record<string, string>;
   body?: string;
   allowPrivate?: boolean;
+  target?: (url:URL)=>boolean;
+  privateAuth?: boolean;
 }
 export interface UpstreamResponse { response: http.IncomingMessage; url: string; dispose(): void }
 
 export async function upstream(input: string | URL, options: UpstreamOptions, hop = 0): Promise<UpstreamResponse> {
-  const url = safeTarget(input, options.allowed);
+  const url = safeTarget(input, options.allowed,options.target);
+  const literal=url.hostname.replace(/^\[|\]$/g,'');if(isIP(literal)&&!options.allowPrivate&&!isPublicAddress(literal))throw new ServiceError('INVALID_INPUT',403);
   if (options.signal.aborted) throw abortError(options.signal);
   const remaining = Math.min(LIMITS.requestMs, options.deadline - Date.now());
   if (remaining <= 0) throw new ServiceError('UPSTREAM_TIMEOUT', 504);
@@ -76,6 +79,7 @@ export async function upstream(input: string | URL, options: UpstreamOptions, ho
         response.destroy(); clearTimeout(timer); reject(new ServiceError('RATE_LIMITED', 429, Number.isFinite(retryMs) ? retryMs : 2000)); return;
       }
       if (status !== 200) {
+        if(options.privateAuth&&(status===401||status===403)){response.destroy();clearTimeout(timer);reject(new ServiceError('CONNECTION_REQUIRED',403));return;}
         response.destroy(); clearTimeout(timer); reject(new ServiceError('NOT_PUBLIC_OR_UNAVAILABLE', status >= 500 ? 502 : 404)); return;
       }
       resolve({ response, url: url.href, dispose() { clearTimeout(timer); response.destroy(); request.destroy(); } });

@@ -1,6 +1,7 @@
 import { LIMITS, CONTRACT_VERSION, CollectionSchema, identifyShare, sourceKey } from '@playlist-avatar/contracts';
-import type { Collection, ResolveInput, PublicPlatform } from '@playlist-avatar/contracts';
+import type { Collection, ResolveInput, PublicPlatform,SourceId } from '@playlist-avatar/contracts';
 import { ArtworkTickets } from './artwork.ts';
+import type {ArtworkPolicy}from'./artwork.ts';
 import { neteasePlaylist, qqPlaylist, type ProviderResult } from './providers.ts';
 import { ByteCache, BoundedQueue } from './queue.ts';
 import { bodyBytes, upstream } from './network.ts';
@@ -34,6 +35,10 @@ export class PublicResolver {
         result = await (source === 'netease' ? neteasePlaylist : qqPlaylist)(id, input.offset, signal, deadline);
         this.cache.set(cacheKey, result, Buffer.byteLength(JSON.stringify(result)));
       }
+      return this.normalize(result,source);
+    }, signal);
+  }
+  normalize(result:ProviderResult,source:SourceId,policy?:ArtworkPolicy,realm?:string,revocation?:AbortSignal):Collection{
       const imageRefs = new Map<string, ReturnType<ArtworkTickets['issue']>>();
       const snapshot = structuredClone(result.snapshot);
       const tracks = result.tracks.map(value => {
@@ -41,15 +46,14 @@ export class PublicResolver {
         if (!coverUrl) return track;
         const identity = value.albumId && value.albumId !== '0' ? value.albumId : createHash('sha256')
           .update(JSON.stringify([value.artists, value.album || null, value.album ? null : value.sourceId])).digest('hex');
-        const artKey = sourceKey(source, undefined, 'artwork', identity);
+        const artKey = sourceKey(source, result.snapshot.connectionId, 'artwork', identity);
         const existing = imageRefs.get(artKey);
         if (existing) return { ...track, artwork: existing };
         if (imageRefs.size >= LIMITS.candidates) return track;
         try {
-          const ref = this.artwork.issue(source, coverUrl, artKey); imageRefs.set(artKey, ref); return { ...track, artwork: ref };
+          const ref = this.artwork.issue(source, coverUrl, artKey,policy,realm,revocation); imageRefs.set(artKey, ref); return { ...track, artwork: ref };
         } catch { if (!snapshot.warnings.includes('IMAGE_UNAVAILABLE')) snapshot.warnings.push('IMAGE_UNAVAILABLE'); return track; }
       });
       return CollectionSchema.parse({ version: CONTRACT_VERSION, snapshot, tracks });
-    }, signal);
   }
 }

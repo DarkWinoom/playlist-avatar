@@ -5,27 +5,32 @@ import { imageInfo } from '../../../packages/artwork/src/image-info.ts';
 import { upstream, safeTarget } from './network.ts';
 import { ServiceError, abortError } from './errors.ts';
 import { BoundedQueue } from './queue.ts';
+import type {UpstreamOptions} from './network.ts';
 
-export const publicArtworkHost = (host: string) => /^p\d+\.music\.126\.net$/.test(host) || host === 'y.gtimg.cn';
-interface Ticket { url: string; source: SourceId; expires: number }
+export const publicArtworkHost = (host: string) => /^p\d+\.music\.126\.net$/.test(host) || host === 'y.gtimg.cn'||host==='lastfm.freetls.fastly.net'||host==='lastfm-img2.akamaized.net';
+export const artworkHost=(source:SourceId)=>(host:string)=>source==='netease'?/^p\d+\.music\.126\.net$/.test(host):source==='qqmusic'?host==='y.gtimg.cn':source==='lastfm'?['lastfm.freetls.fastly.net','lastfm-img2.akamaized.net'].includes(host):false;
+export type ArtworkPolicy=Pick<UpstreamOptions,'allowed'|'allowPrivate'|'headers'|'target'>;
+interface Ticket { url: string; source: SourceId; expires: number;policy:ArtworkPolicy;realm?:string;revocation?:AbortSignal }
 export class ArtworkTickets {
   private tickets = new Map<string, Ticket>();
   readonly queue = new BoundedQueue(LIMITS.images, 32);
-  issue(source: SourceId, url: string, key: string) {
-    safeTarget(url, publicArtworkHost);
+  issue(source: SourceId, url: string, key: string,policy:ArtworkPolicy={allowed:artworkHost(source)},realm?:string,revocation?:AbortSignal) {
+    safeTarget(url, policy.allowed,policy.target);
     for (const [id, record] of this.tickets) if (record.expires <= Date.now()) this.tickets.delete(id);
     while (this.tickets.size >= 512) this.tickets.delete(this.tickets.keys().next().value!);
     const id = randomBytes(24).toString('base64url');
-    this.tickets.set(id, { source, url, expires: Date.now() + 600000 });
+    this.tickets.set(id, { source, url, expires: Date.now() + 600000,policy,realm,revocation });
     return { key, href: `/api/v1/artwork/${id}` };
   }
-  get(id: string) {
+  get(id: string,realm?:string) {
     const ticket = this.tickets.get(id);
     if (!ticket || ticket.expires <= Date.now()) { this.tickets.delete(id); throw new ServiceError('IMAGE_UNAVAILABLE', 404); }
+    if(ticket.realm&&ticket.realm!==realm)throw new ServiceError('CONNECTION_REQUIRED',403);
     return ticket;
   }
-  async open(id: string, signal: AbortSignal, deadline: number) {
-    const ticket = this.get(id);
+  async open(id: string, signal: AbortSignal, deadline: number,realm?:string) {
+    const ticket = this.get(id,realm);
+    if(ticket.revocation)signal=AbortSignal.any([signal,ticket.revocation]);
     const release = await this.queue.acquire(signal);
     let response: Awaited<ReturnType<typeof upstream>> | undefined;
     let disposed = false;
@@ -33,7 +38,7 @@ export class ArtworkTickets {
     signal.addEventListener('abort', dispose, { once: true });
     try {
       for (let attempt = 0; ; attempt++) {
-        try { response = await upstream(ticket.url, { signal, deadline, allowed: publicArtworkHost }); break; }
+        try { response = await upstream(ticket.url, { ...ticket.policy,signal, deadline }); break; }
         catch (error) { if (attempt === 0 && error instanceof ServiceError && error.code === 'UPSTREAM_TIMEOUT' && Date.now() < deadline && !signal.aborted) continue; throw error; }
       }
       const declared = response.response.headers['content-type']?.split(';')[0]?.toLowerCase();

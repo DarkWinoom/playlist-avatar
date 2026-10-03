@@ -6,10 +6,10 @@ export function grain(c: DrawingContext, recipe: Recipe, strength: number) {
   if (!strength) return; const random = seeded(recipe.seed ^ 8282); c.save(); c.globalAlpha = strength * .11;
   for (let i=0;i<1800;i++) { c.fillStyle = i%2 ? '#000' : '#fff'; c.fillRect(random(),random(),.0015+random()*.001,.0015); } c.restore();
 }
-export function generated(c: DrawingContext, recipe: Recipe) {
+export function generated(c: DrawingContext, recipe: Recipe,transparent=false) {
   const random=seeded(recipe.seed), phase=recipe.materialPhase*Math.PI*2+random()*Math.PI*2;
   if (recipe.template==='aura') {
-    c.fillStyle='#181f2c';c.fillRect(0,0,1,1);const spread=parameter(recipe,'spread',60)/100;
+    if(!transparent){c.fillStyle='#181f2c';c.fillRect(0,0,1,1);}const spread=parameter(recipe,'spread',60)/100;
     for(let i=0;i<5;i++){const x=.15+random()*.7,y=.15+random()*.7,g=c.createRadialGradient(x,y,0,x,y,.25+spread*.45);g.addColorStop(0,ink(recipe,i));g.addColorStop(1,'#00000000');c.fillStyle=g;c.fillRect(0,0,1,1);}
     const core=parameter(recipe,'core',55)/100,g=c.createRadialGradient(.5,.48,0,.5,.48,.03+core*.2);g.addColorStop(0,'#ffffeccc');g.addColorStop(1,'#ffffec00');c.fillStyle=g;c.fillRect(0,0,1,1);grain(c,recipe,parameter(recipe,'grain',30)/100);
   }
