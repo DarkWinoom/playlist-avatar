@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { geometry, interpolateTiles, seeded, imageProjections } from './geometry.ts';
 import type { Recipe } from '@playlist-avatar/contracts';
-const recipe: Recipe = { version: 1, templateVersion: 1, template: 'mosaic', assetIds: ['a', 'b', 'c', 'd'], parameters: {}, seed: 5, palette: ['#123456'], paletteLocked: false, title: '', titleEnabled: false, materialPhase: .3,weightMode:'equal',assetStats:{},sourceOrder:[] };
+const recipe: Recipe = { version: 1, templateVersion: 1, template: 'mosaic', assetIds: ['a', 'b', 'c', 'd'], parameters: {}, seed: 5, palette: ['#123456'], paletteLocked: false, title: '', titleEnabled: false, materialPhase: .3,weightMode:'equal',assetStats:{},sourceOrder:[],sourceRanks:{} };
 it('preserves identities across grid to fan and midway retargeting', () => {
   const grid = geometry(recipe), fan = geometry({ ...recipe, template: 'sleeve' });
   const half = interpolateTiles(grid, fan, .5), redirected = interpolateTiles(half, grid, .2);

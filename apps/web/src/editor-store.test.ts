@@ -1,5 +1,5 @@
 import { beforeEach, expect, it } from 'vitest';
-import { freshRecipe, useEditor } from './editor-store.ts';
+import { freshRecipe, useEditor,sourceOrdered } from './editor-store.ts';
 import type { ArtworkAsset, SourceSnapshot } from '@playlist-avatar/contracts';
 beforeEach(() => useEditor.getState().load(freshRecipe(), []));
 it('merges an entire gesture and restores per-template parameters', () => {
@@ -26,4 +26,9 @@ it('replaces a deselected source slot without losing the new source order or sta
  const editor=useEditor.getState();editor.add(incoming.slice(0,16),undefined,true);editor.select('a4');editor.add([incoming[16]!]);
  expect(useEditor.getState().recipe.sourceOrder).toEqual([...incoming.slice(0,16).map(a=>a.id).filter(id=>id!=='a4'),'a16']);
  expect(Object.keys(useEditor.getState().recipe.assetStats)).toHaveLength(16);expect(useEditor.getState().recipe.assetStats.a16?.occurrenceCount).toBe(17);
+});
+it('restores source positions after deselect/reselect and preserves the old source through undo',()=>{
+ const assets=[0,1].map(i=>({id:`a${i}`,fingerprint:i.toString(16).padStart(64,'0'),order:i,blob:new Blob(['a']),thumbnail:new Blob(['a']),width:1,height:1,bytes:1,colors:['#123456'],label:`a${i}`,createdAt:new Date().toISOString()}));
+ const editor=useEditor.getState();editor.add(assets,undefined,true);editor.select('a0');editor.select('a0');let state=useEditor.getState();expect(sourceOrdered(state.recipe.assetIds,state.recipe,state.assets)).toEqual(['a0','a1']);
+ editor.add([{...assets[0]!,order:9},assets[1]!],undefined,true);editor.undo();state=useEditor.getState();expect(state.assets.a0?.order).toBe(9);expect(sourceOrdered(['a1','a0'],state.recipe,state.assets)).toEqual(['a0','a1']);
 });

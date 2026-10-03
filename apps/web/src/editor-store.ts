@@ -5,7 +5,11 @@ import type { ArtworkAsset, Recipe, SourceSnapshot, TemplateId } from '@playlist
 export const DEFAULT_PALETTE = ['#d66641', '#456f8c', '#233d31', '#ddbb73'];
 export function freshRecipe(ids: string[] = []): Recipe {
   return { version: 1, templateVersion: 1, template: 'mosaic', assetIds: [...new Set(ids)].slice(0, 16), parameters: {}, seed: 1701,
-    palette: DEFAULT_PALETTE, paletteLocked: false, title: '', titleEnabled: false, materialPhase: .35,weightMode:'equal',assetStats:{},sourceOrder:[...new Set(ids)].slice(0,16) };
+    palette: DEFAULT_PALETTE, paletteLocked: false, title: '', titleEnabled: false, materialPhase: .35,weightMode:'equal',assetStats:{},sourceOrder:[...new Set(ids)].slice(0,16),sourceRanks:Object.fromEntries([...new Set(ids)].slice(0,16).map((id,i)=>[id,i])) };
+}
+export function sourceOrdered(ids:string[],recipe:Recipe,assets:Record<string,ArtworkAsset>){
+ const position=(id:string)=>recipe.sourceRanks[id]??assets[id]?.order??(recipe.sourceOrder.includes(id)?recipe.sourceOrder.indexOf(id):Number.MAX_SAFE_INTEGER);
+ return [...ids].sort((a,b)=>position(a)-position(b)||(Date.parse(assets[a]?.createdAt||'')||0)-(Date.parse(assets[b]?.createdAt||'')||0));
 }
 interface EditorFrame { recipe: Recipe; snapshot?: SourceSnapshot }
 interface EditorState {
@@ -36,7 +40,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   redo() { get().end(); const state = get(), frame = state.future[0]; if (!frame) return;
     set({ ...frame, past: [...state.past, { recipe: state.recipe, snapshot: state.snapshot }].slice(-LIMITS.history), future: state.future.slice(1), revision: state.revision + 1 }); },
   add(incoming, snapshot, replace = false) {
-    const state = get(); const assets = { ...state.assets }; incoming.forEach(asset => { assets[asset.id] = asset; });
+    const state = get(); const assets = { ...state.assets };let nextRank=replace?0:Math.min(Number.MAX_SAFE_INTEGER,Math.max(-1,...Object.values(state.recipe.sourceRanks))+1);
+    incoming=incoming.map(asset=>({...asset,order:asset.order??(replace?nextRank++:state.recipe.sourceRanks[asset.id]??nextRank++)}));incoming.forEach(asset => { assets[asset.id] = asset; });
     const ids = replace ? [...new Set(incoming.map(a => a.id))].slice(0, 16) : [...new Set([...state.recipe.assetIds, ...incoming.map(a => a.id)])].slice(0, 16);
     const referenced = new Set([...state.past, ...state.future, { recipe: state.recipe }].flatMap(r => r.recipe.assetIds));
     incoming.forEach(a => referenced.add(a.id));
@@ -44,16 +49,19 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (Object.values(retained).reduce((sum, a) => sum + a.bytes + a.thumbnail.size, 0) > LIMITS.candidateBytes) throw new Error('RESPONSE_TOO_LARGE');
     set({ assets: retained });
     const assetStats=Object.fromEntries(ids.flatMap(id=>{const statistics=incoming.find(a=>a.id===id)?.statistics||state.recipe.assetStats[id]||assets[id]?.statistics;return statistics?[[id,statistics]]:[];}));
-    state.update({ assetIds: ids,assetStats,sourceOrder:replace?ids:[...new Set([...state.recipe.sourceOrder.filter(id=>ids.includes(id)),...ids])], palette: state.recipe.paletteLocked ? state.recipe.palette : incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8).length ? incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8) : DEFAULT_PALETTE }, snapshot);
+    const sourceRanks=Object.fromEntries(ids.map(id=>[id,incoming.find(a=>a.id===id)?.order??state.recipe.sourceRanks[id]??assets[id]?.order??nextRank++]));
+    state.update({ assetIds: ids,assetStats,sourceRanks,sourceOrder:sourceOrdered(ids,{...state.recipe,sourceRanks},assets), palette: state.recipe.paletteLocked ? state.recipe.palette : incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8).length ? incoming.flatMap(a => a.colors.slice(0, 1)).slice(0, 8) : DEFAULT_PALETTE }, snapshot);
   },
-  load(recipe, incoming, snapshot) { RecipeSchema.parse(recipe); const assets = Object.fromEntries(incoming.map(a => [a.id, a]));
+  load(recipe, incoming, snapshot) { recipe=RecipeSchema.parse(recipe); const assets = Object.fromEntries(incoming.map(a => [a.id, a]));
     if(incoming.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size,0)>LIMITS.candidateBytes)throw new Error('RESPONSE_TOO_LARGE');
     if (recipe.assetIds.some(id => !assets[id])) throw new Error('INVALID_PACKAGE');
     set({ recipe: structuredClone(recipe), assets, snapshot, past: [], future: [], gesture: undefined, revision: get().revision + 1 }); },
   select(id) { const state = get(); if (!state.assets[id]) return;
     const ids = state.recipe.assetIds.includes(id) ? state.recipe.assetIds.filter(value => value !== id) : [...state.recipe.assetIds, id].slice(0, 16);
-    const sourceOrder=[...new Set([...state.recipe.sourceOrder.filter(key=>ids.includes(key)),...ids])];
-    state.update({ assetIds: ids, sourceOrder, assetStats:Object.fromEntries(ids.flatMap(key=>{const value=state.recipe.assetStats[key]||state.assets[key]?.statistics;return value?[[key,value]]:[];})) }); },
+    const ranks={...state.recipe.sourceRanks};if(ids.includes(id)&&ranks[id]===undefined)ranks[id]=state.assets[id]!.order??Math.min(Number.MAX_SAFE_INTEGER,Math.max(-1,...Object.values(ranks))+1);
+    const sourceRanks=Object.keys(ranks).length>16?Object.fromEntries(ids.map(key=>[key,ranks[key]!])):ranks;
+    const sourceOrder=sourceOrdered(ids,{...state.recipe,sourceRanks},state.assets);
+    state.update({ assetIds: ids, sourceOrder, sourceRanks, assetStats:Object.fromEntries(ids.flatMap(key=>{const value=state.recipe.assetStats[key]||state.assets[key]?.statistics;return value?[[key,value]]:[];})) }); },
   reorder(index, direction) { const state = get(), ids = [...state.recipe.assetIds], next = index + direction;
     if (next < 0 || next >= ids.length) return; [ids[index], ids[next]] = [ids[next]!, ids[index]!]; state.update({ assetIds: ids }); },
   template(id) { get().update({ template: id }); },

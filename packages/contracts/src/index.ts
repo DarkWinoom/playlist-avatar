@@ -87,7 +87,7 @@ const parameter = z.union([z.number().finite(), z.boolean(), z.string().max(128)
 export const RecipeSchema = z.object({ version: z.literal(1), template: TemplateSchema, templateVersion: z.literal(1),
   assetIds: z.array(key).max(LIMITS.selected).refine(ids => new Set(ids).size === ids.length), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
   seed: z.number().int().min(0).max(4294967295), palette: z.array(ColorSchema).min(1).max(8), paletteLocked: z.boolean(),
-  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]) });
+  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]),sourceRanks:z.record(key,count).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}) });
 export type Recipe = z.infer<typeof RecipeSchema>;
 export const AssetMetadataSchema = z.object({ id: key, fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   width: count.min(1).max(8192), height: count.min(1).max(8192), bytes: count,
