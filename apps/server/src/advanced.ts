@@ -18,7 +18,7 @@ export function profilePolicy(profile:Profile):ArtworkPolicy {
 }
 function endpoint(profile:Profile,path:string,params?:Record<string,string>){const url=new URL(`${profile.baseUrl}/${path}`);for(const[key,value]of Object.entries(params||{}))url.searchParams.set(key,value);return url;}
 function subParams(session:Session){return {u:session.username,t:session.token!,s:session.salt!,v:'1.16.1',c:'PlaylistAvatar',f:'json'};}
-function jellyHeaders(session:Pick<Session,'owner'|'token'>){return {Authorization:`MediaBrowser Client="Playlist Avatar", Device="Browser", DeviceId="${session.owner}", Version="0.1.0"${session.token?`, Token="${session.token}"`:''}`};}
+function jellyHeaders(session:Pick<Session,'owner'|'token'>){return {Authorization:`MediaBrowser Client="Playlist Avatar", Device="Browser", DeviceId="${session.owner}", Version="0.1.1"${session.token?`, Token="${session.token}"`:''}`};}
 function row(source:SourceId,namespace:string,raw:Raw,order:number,kind:'track'|'album'='track'):ProviderTrack|undefined{
   const id=text(raw.Id??raw.id),title=text(raw.Name??raw.title??raw.name);if(!id||!title||id.length>128)return;
   const artists=array(raw.Artists).map(text);if(!artists.length&&text(raw.artist))artists.push(text(raw.artist));

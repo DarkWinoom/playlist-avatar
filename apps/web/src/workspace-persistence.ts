@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState}from'react';
 import type{RefObject}from'react';
 import type{ArtworkAsset,Project}from'@playlist-avatar/contracts';
-import{freshRecipe,useEditor}from'./editor-store.ts';import{originalAssets}from'./assets.ts';
+import{freshRecipe,useEditor}from'./editor-store.ts';import{originalAssets}from'./assets.ts';import{recipeAssets}from'@playlist-avatar/contracts';
 import{repository,storageMessage}from'./repository.ts';import{invalidateStorage,serializedStorage,storageEpoch}from'./storage-coordinator.ts';
 let originals:Promise<ArtworkAsset[]>|undefined;
 export function useWorkspacePersistence(chinese:boolean,operation:RefObject<number>,store=repository()){
@@ -13,7 +13,7 @@ export function useWorkspacePersistence(chinese:boolean,operation:RefObject<numb
      const draft=await serializedStorage(()=>store.get('draft'));if(cancelled)return;
      if(token!==operation.current||initial!==useEditor.getState().revision){paused.current=true;setReady(true);setStatus('dirty');return;}
      if(draft)useEditor.getState().load(draft.project.recipe,draft.assets,draft.project.snapshot);
-     else{originals??=originalAssets();const assets=await originals;if(cancelled)return;if(token!==operation.current||initial!==useEditor.getState().revision){paused.current=true;setReady(true);return;}useEditor.getState().load(freshRecipe(assets.map(a=>a.id)),assets);}
+else{originals??=originalAssets();const assets=await originals;if(cancelled)return;if(token!==operation.current||initial!==useEditor.getState().revision){paused.current=true;setReady(true);return;}useEditor.getState().load({...freshRecipe(assets.map(a=>a.id)),template:'aura'},assets);}
      setReady(true);setStatus(draft?'saved':'dirty');
    }catch{paused.current=true;originals??=originalAssets();const assets=await originals;if(cancelled)return;
      if(token===operation.current&&initial===useEditor.getState().revision)useEditor.getState().load(freshRecipe(assets.map(a=>a.id)),assets);
@@ -24,7 +24,7 @@ export function useWorkspacePersistence(chinese:boolean,operation:RefObject<numb
    function schedule(){cancelWrites();if(paused.current||useEditor.getState().gesture)return;setStatus('dirty');const token=storageEpoch();
      timer.current=setTimeout(()=>{if(token!==storageEpoch()||paused.current||useEditor.getState().gesture)return;const state=useEditor.getState(),now=new Date().toISOString(),revision=state.revision;
        const project:Project={version:1,id:'draft',name:currentRef.current?.name||state.snapshot?.title?.slice(0,120)||'Untitled',createdAt:now,updatedAt:now,recipe:structuredClone(state.recipe),snapshot:state.snapshot?structuredClone(state.snapshot):undefined};
-       const assets=project.recipe.assetIds.map(id=>state.assets[id]!).filter(Boolean);setStatus('saving');
+       const assets=recipeAssets(project.recipe).map(id=>state.assets[id]!).filter(Boolean);setStatus('saving');
        void serializedStorage(async()=>{if(token!==storageEpoch()||paused.current)return;try{await store.save(project,assets);if(!disposed&&token===storageEpoch()&&useEditor.getState().revision===revision){setStatus('saved');setError('');}}
          catch(failure){if(!disposed&&token===storageEpoch()){setStatus('error');setError(storageMessage(failure,locale.current));}}});
      },600);
@@ -34,7 +34,7 @@ export function useWorkspacePersistence(chinese:boolean,operation:RefObject<numb
  },[ready]);
  async function save(name:string,copy=false){const state=useEditor.getState(),now=new Date().toISOString(),existing=copy?undefined:current,token=operation.current,writeEpoch=storageEpoch(),identity=currentRef.current?.id;
    const project:Project={version:1,id:existing?.id||`project:${crypto.randomUUID()}`,name:name.trim(),createdAt:existing?.createdAt||now,updatedAt:now,recipe:structuredClone(state.recipe),snapshot:state.snapshot?structuredClone(state.snapshot):undefined};
-   const{renderExport}=await import('./export-render.ts');const assets=project.recipe.assetIds.map(id=>state.assets[id]!).filter(Boolean),thumbnail=await renderExport(project.recipe,assets,{format:'image/png',size:512,transparent:false,circle:false,background:'#fff',quality:.92});
+   const{renderExport}=await import('./export-render.ts');const assets=recipeAssets(project.recipe).map(id=>state.assets[id]!).filter(Boolean),thumbnail=await renderExport(project.recipe,assets,{format:'image/png',size:512,transparent:false,circle:false,background:'#fff',quality:.92});
    await serializedStorage(()=>{if(token!==operation.current||writeEpoch!==storageEpoch())throw new Error('CANCELLED');return store.save(project,assets,thumbnail);});if(token===operation.current&&writeEpoch===storageEpoch()&&identity===currentRef.current?.id)setCurrent(project);return project;
  }
  async function open(id:string){cancelWrites();const token=operation.current,revision=useEditor.getState().revision,value=await serializedStorage(()=>store.get(id));

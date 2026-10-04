@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 import type { DBSchema } from 'idb';
-import { AssetMetadataSchema, LIMITS, ProjectSchema } from '@playlist-avatar/contracts';
+import { AssetMetadataSchema, LIMITS, ProjectSchema,recipeAssets } from '@playlist-avatar/contracts';
 import type { ArtworkAsset, AssetMetadata, Project, StoredProject } from '@playlist-avatar/contracts';
 
 export interface LibraryRecord extends StoredProject { state: 'active' | 'trashed'; trashedAt?: string }
@@ -17,10 +17,10 @@ export function createRepository(name = 'playlist-avatar.v1') {
     const projects = db.createObjectStore('projects', { keyPath: 'id' }); projects.createIndex('updated', 'updatedAt');
     db.createObjectStore('metadata', { keyPath: 'id' }); db.createObjectStore('materials', { keyPath: 'id' }); db.createObjectStore('connections', { keyPath: 'id' });
   } });
-  const references=(record:unknown)=>{const parsed=ProjectSchema.safeParse(record);return parsed.success?parsed.data.recipe.assetIds:undefined;};
+  const references=(record:unknown)=>{const parsed=ProjectSchema.safeParse(record);return parsed.success?recipeAssets(parsed.data.recipe):undefined;};
   const recordSize=(record:LibraryRecord)=>{try{return new TextEncoder().encode(JSON.stringify({...record,thumbnail:undefined})).length+(record.thumbnail instanceof Blob?record.thumbnail.size:0);}catch{return LIMITS.manifestBytes;}};
   async function save(project: Project, assets: ArtworkAsset[], thumbnail?: Blob, limit = LIMITS.projectBytes,signal?:AbortSignal) {
-    const parsed = ProjectSchema.parse(project), needed = [...new Set(parsed.recipe.assetIds)], incoming = new Map(assets.map(a => [a.id,a]));
+    const parsed = ProjectSchema.parse(project), needed = recipeAssets(parsed.recipe), incoming = new Map(assets.map(a => [a.id,a]));
     const db = await database, tx = db.transaction(['projects','metadata','materials'],'readwrite');
     const cancel=()=>{try{tx.abort();}catch{}};if(signal?.aborted){cancel();await tx.done.catch(()=>{});throw new Error('CANCELLED');}signal?.addEventListener('abort',cancel,{once:true});
     try {
@@ -47,7 +47,7 @@ export function createRepository(name = 'playlist-avatar.v1') {
   async function get(id:string) {
     const db=await database,tx=db.transaction(['projects','metadata','materials']),project=await tx.objectStore('projects').get(id);if(!project)return;
     const parsed=ProjectSchema.parse(project),assets:ArtworkAsset[]=[];
-    for(const key of [...new Set(parsed.recipe.assetIds)]){const metadata=await tx.objectStore('metadata').get(key),data=await tx.objectStore('materials').get(key);if(!metadata||!data)throw new Error('INVALID_PACKAGE');assets.push({...AssetMetadataSchema.parse(metadata),blob:data.blob,thumbnail:data.thumbnail});}await tx.done;
+    for(const key of recipeAssets(parsed.recipe)){const metadata=await tx.objectStore('metadata').get(key),data=await tx.objectStore('materials').get(key);if(!metadata||!data)throw new Error('INVALID_PACKAGE');assets.push({...AssetMetadataSchema.parse(metadata),blob:data.blob,thumbnail:data.thumbnail});}await tx.done;
     return {project:{...parsed,state:project.state,thumbnail:project.thumbnail},assets};
   }
   async function list(state:'active'|'trashed'='active',count=50) {

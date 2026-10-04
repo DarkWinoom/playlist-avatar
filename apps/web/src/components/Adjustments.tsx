@@ -7,7 +7,7 @@ export function Adjustments({ chinese }: { chinese: boolean }) {
   return <div className="adjustments"><h2>{chinese ? '调整' : 'Adjust'}</h2>{controls.map(({key,en,zh,value:fallback,min,max}) => { const label=chinese?zh:en; return <div className="slider-field" key={key}>
     <label id={`label-${key}`}>{label}<span>{Number(editor.recipe.parameters[editor.recipe.template]?.[key] ?? fallback)}</span></label>
     <Slider.Root className="slider" aria-labelledby={`label-${key}`} value={[Number(editor.recipe.parameters[editor.recipe.template]?.[key] ?? fallback)]} min={min} max={max} step={1}
-      onPointerDown={editor.begin} onPointerUp={editor.end} onPointerCancel={editor.end} onKeyDown={editor.begin} onKeyUp={editor.end}
+      onPointerDown={editor.begin} onPointerUp={editor.end} onPointerCancel={editor.end} onKeyDown={event=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(event.key))editor.begin();}} onKeyUp={editor.end} onBlur={editor.end}
       onValueChange={values => editor.parameter(key, values[0]!)} onValueCommit={editor.end}>
       <Slider.Track className="slider-track"><Slider.Range className="slider-range" /></Slider.Track><Slider.Thumb className="slider-thumb" aria-label={label} />
     </Slider.Root></div>; })}

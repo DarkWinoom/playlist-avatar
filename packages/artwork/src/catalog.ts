@@ -17,7 +17,16 @@ export const CATALOG: { id: TemplateId; en: string; zh: string; group: number; c
   { id:'prism',en:'Prism',zh:'棱镜',group:3,controls:[{key:'facets',en:'Facets',zh:'切面',value:5,min:3,max:8},{key:'dispersion',en:'Dispersion',zh:'色散',value:60,min:0,max:100},{key:'direction',en:'Direction',zh:'方向',value:40,min:0,max:100}] },
   { id:'glass',en:'Glass',zh:'琉璃',group:3,controls:[{key:'layers',en:'Layers',zh:'层数',value:3,min:1,max:4},{key:'refraction',en:'Refraction',zh:'折射',value:55,min:0,max:100},{key:'radius',en:'Corners',zh:'圆角',value:45,min:0,max:100}] },
   { id:'eclipse',en:'Eclipse',zh:'日蚀',group:3,controls:[{key:'halo',en:'Halo',zh:'光环',value:60,min:0,max:100},{key:'offset',en:'Offset',zh:'偏移',value:25,min:-60,max:60},{key:'brightness',en:'Brightness',zh:'亮度',value:65,min:0,max:100}] },
+  { id:'duo',en:'Duo',zh:'双重奏',group:0,controls:[{key:'balance',en:'Balance',zh:'比例',value:50,min:25,max:75},{key:'gap',en:'Gap',zh:'间距',value:6,min:0,max:16},{key:'tilt',en:'Tilt',zh:'倾斜',value:12,min:-30,max:30}] },
+  { id:'focus',en:'Focus',zh:'留影',group:0,controls:[{key:'inset',en:'Inset',zh:'小图比例',value:30,min:18,max:42},{key:'offset',en:'Offset',zh:'错位',value:60,min:0,max:100},{key:'radius',en:'Corners',zh:'圆角',value:12,min:0,max:30}] },
+  { id:'contact',en:'Contact',zh:'样片',group:0,controls:[{key:'columns',en:'Columns',zh:'列数',value:3,min:2,max:4},{key:'gap',en:'Spacing',zh:'留白',value:5,min:2,max:12},{key:'ink',en:'Ink',zh:'标记颜色',value:2,min:0,max:7}] },
+  { id:'strips',en:'Strips',zh:'剪影条',group:0,controls:[{key:'count',en:'Strips',zh:'条数',value:4,min:2,max:6},{key:'stagger',en:'Stagger',zh:'错落',value:50,min:0,max:100},{key:'tilt',en:'Tilt',zh:'倾斜',value:5,min:-15,max:15}] },
+  { id:'ribbon',en:'Ribbon',zh:'缎带',group:2,controls:[{key:'folds',en:'Folds',zh:'折叠',value:7,min:3,max:12},{key:'width',en:'Width',zh:'宽度',value:60,min:25,max:90},{key:'bend',en:'Bend',zh:'弯曲',value:55,min:0,max:100}] },
+  { id:'bloom',en:'Bloom',zh:'绽放',group:2,controls:[{key:'petals',en:'Petals',zh:'花瓣',value:8,min:4,max:14},{key:'spread',en:'Spread',zh:'展开',value:60,min:20,max:90},{key:'core',en:'Core',zh:'花心',value:45,min:15,max:75}] },
+  { id:'mesh',en:'Mesh',zh:'色织',group:2,controls:[{key:'density',en:'Density',zh:'密度',value:8,min:4,max:16},{key:'round',en:'Roundness',zh:'圆润',value:65,min:0,max:100},{key:'shift',en:'Shift',zh:'交错',value:40,min:0,max:100}] },
+  { id:'waves',en:'Waves',zh:'叠浪',group:2,controls:[{key:'layers',en:'Layers',zh:'层数',value:6,min:3,max:12},{key:'height',en:'Height',zh:'起伏',value:60,min:0,max:100},{key:'horizon',en:'Horizon',zh:'地平线',value:35,min:15,max:55}] },
 ];
+export function usesImages(id:TemplateId){return ['mosaic','sleeve','disc','wall','film','halftone','glass','duo','focus','contact','strips'].includes(id);}
 export const FEATURED: TemplateId[] = ['mosaic','sleeve','disc','film','aura','orbit','glass','eclipse'];
 export function controlsFor(recipe: Recipe) {
   return CATALOG.find(item => item.id === recipe.template)!.controls.map(control => ({ ...control,

@@ -1,4 +1,27 @@
-# 0.1.0 acceptance candidate / 验收候选
+# 0.1.1 acceptance candidate / 验收候选
+
+The current local candidate adds a refined workbench, playlist import dialog, 24 compositions and direct photo editing. New workspaces start with Aura; existing drafts retain their saved template. Unused materials remain available and are included with image framing in saved works and ZIP backups. The previous 0.1.0 images and archives are retained as a rollback baseline.
+
+当前本地候选完成工作台优化、歌单弹窗、24套构图和画布图片编辑；新工作区默认光晕，旧草稿按原模板恢复。备用素材与裁切完整保存及备份；0.1.0镜像与归档保留用于回退。
+
+| Area / 项目 | Current evidence / 本轮结果 |
+| --- | --- |
+| Source checks | 62 tests / 18 files, types and production build pass; frozen dependencies and 56 runtime notices. |
+| Templates | 24 distinct 512px PNGs plus 24 parameter/seed/framing variants; HTML/Offscreen export pixel parity. Mesh seed-only change also verified. |
+| Production Workers | Duo/Bloom/Glass JPEG and WebP at actual 2048px; ZIP round-trip with four materials, two selected and framing retained. |
+| Interaction | Actual Chromium mouse canvas swap, shelf-to-canvas replacement, crop drag with one Undo, deselect/reselect, saved work reopened with unused materials and framing. |
+| Layout | Desktop Chromium at 320, 375, 768 and 1440px, dark theme and reduced motion; no claim of physical touch-device coverage. |
+| Initial files | JS gzip about 207kB, CSS gzip 6.63kB. Previous whole-browser and container measurements below are historical, not rerun results for this editor. |
+| linux/amd64 | playlist-avatar:0.1.1-local; versioned health/static/gzip/capabilities/security HTTP smoke passed at 18080. |
+| linux/arm64 | playlist-avatar:0.1.1-arm64 built using native build stage and ARM runtime base. Current Docker host returns Exec format error for ARM Node; runtime and native ARM/NAS validation remain pending. |
+
+No public registry, push/upload or project distribution license has been selected. Project-owned code remains UNLICENSED. Actual Last.fm/self-hosted instances, physical phones/IME/screen readers and Firefox/Safari are still unverified. The browser library remains on the same origin; updating this local container does not clear its data. Updated source and image packages use 0.1.1 names and supplied checksums.
+
+未公开发布、推送或上传；自有代码继续UNLICENSED。真实高级服务、真手机/输入法/读屏及Firefox/Safari仍未验证。作品库地址不变，本机更新不清除数据。新版交付包使用0.1.1文件名与校验值。
+
+---
+
+# 0.1.0 historical baseline / 历史基线
 
 Local development and packaging are ready for owner acceptance. No Git remote, public registry or publishing destination is configured; nothing has been pushed/uploaded. Project-owned code remains UNLICENSED until the owner selects a public distribution license. Runtime dependency texts for56 packages and Lucide notices are included in source/images. Ordinary use documentation is complete in [English](../README.md) and [Chinese](../README.zh-CN.md).
 

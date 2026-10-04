@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import type{ReactNode}from'react';
 import { geometry, interpolateTiles, render, imageProjections, prepareRenderer, CATALOG,artworkWeights } from '@playlist-avatar/artwork';
 import type { RenderImage, Tile } from '@playlist-avatar/artwork';
 import type { ArtworkAsset, Recipe } from '@playlist-avatar/contracts';
 import type { TemplateId } from '@playlist-avatar/contracts';
 
-export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, checks = false,onFrame }: { recipe: Recipe; assets: Record<string, ArtworkAsset>; reduce: boolean; circle: boolean; direct?: boolean; checks?:boolean;onFrame?:(time:number)=>void }) {
+export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, checks = false,onFrame,children }: { recipe: Recipe; assets: Record<string, ArtworkAsset>; reduce: boolean; circle: boolean; direct?: boolean; checks?:boolean;onFrame?:(time:number)=>void;children?:ReactNode }) {
   const canvas = useRef<HTMLCanvasElement>(null), holder = useRef<HTMLDivElement>(null);
   const small=useRef<(HTMLCanvasElement|null)[]>([]);
   const [size, setSize] = useState(640), [images, setImages] = useState(new Map<string, RenderImage>());
@@ -58,5 +59,5 @@ export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, 
     frame = requestAnimationFrame(draw); return () => { cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);previous.width=previous.height=0;if(targetCanvas)targetCanvas.width=targetCanvas.height=0; };
   }, [recipe, size, images, reduce, direct, ready, checks]);
   useEffect(() => () => images.forEach(value => (value.image as ImageBitmap).close()), [images]);
-  return <><div ref={holder} className={`artwork-canvas${circle ? ' circle' : ''}`} aria-busy={ready!==recipe.template}><canvas ref={canvas} role="img" aria-label={`${recipe.template} artwork`} /></div>{checks&&<div className="avatar-checks">{[48,96].map((value,i)=><div key={value}><canvas ref={element=>{small.current[i]=element;}} width={value} height={value} role="img" aria-label={`${value}px avatar`} /><small>{value}px</small></div>)}</div>}</>;
+  return <><div ref={holder} className={`artwork-canvas${circle ? ' circle' : ''}`} aria-busy={ready!==recipe.template}><canvas ref={canvas} role="img" aria-label={`${recipe.template} artwork`} />{children}</div>{checks&&<div className="avatar-checks">{[48,96].map((value,i)=><div key={value}><canvas ref={element=>{small.current[i]=element;}} width={value} height={value} role="img" aria-label={`${value}px avatar`} /><small>{value}px</small></div>)}</div>}</>;
 }

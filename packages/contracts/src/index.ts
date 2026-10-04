@@ -6,7 +6,8 @@ export const CONTRACT_VERSION = 1 as const;
 export const SOURCE_IDS = ['netease', 'qqmusic', 'local', 'lastfm', 'subsonic', 'jellyfin'] as const;
 export type SourceId = typeof SOURCE_IDS[number];
 export const TEMPLATE_IDS = ['mosaic', 'sleeve', 'disc', 'wall', 'film', 'riso', 'halftone', 'type',
-  'aura', 'orbit', 'pulse', 'terrain', 'chrome', 'prism', 'glass', 'eclipse'] as const;
+  'aura', 'orbit', 'pulse', 'terrain', 'chrome', 'prism', 'glass', 'eclipse',
+  'duo','focus','contact','strips','ribbon','bloom','mesh','waves'] as const;
 export const ERROR_CODES = ['INVALID_INPUT', 'UNSUPPORTED_SOURCE', 'NOT_PUBLIC_OR_UNAVAILABLE', 'INCOMPLETE_SOURCE',
   'UPSTREAM_TIMEOUT', 'RATE_LIMITED', 'IMAGE_UNAVAILABLE', 'RESPONSE_TOO_LARGE', 'CANCELLED',
   'UNCONFIGURED_SOURCE', 'CONNECTION_REQUIRED', 'INVALID_IMAGE', 'UNSUPPORTED_FORMAT', 'INVALID_PACKAGE', 'INTERNAL_ERROR'] as const;
@@ -84,14 +85,18 @@ export const LastfmInputSchema=z.object({username:z.string().regex(/^[\w-]{1,64}
 export const ConnectInputSchema=z.object({profileId:z.string().regex(/^[\w-]{1,64}$/),username:z.string().min(1).max(128),password:z.string().max(1024),cookie:z.string().max(8192).optional()}).strict();
 export const AdvancedInputSchema=z.object({kind:z.enum(['playlist','recent-albums','frequent-albums']),collectionId:z.string().max(128).optional(),offset:count.default(0)}).strict();
 const parameter = z.union([z.number().finite(), z.boolean(), z.string().max(128)]);
+export const ImageFrameSchema=z.object({x:z.number().finite().min(-1).max(1),y:z.number().finite().min(-1).max(1),zoom:z.number().finite().min(1).max(2)});
+export type ImageFrame=z.infer<typeof ImageFrameSchema>;
 export const RecipeSchema = z.object({ version: z.literal(1), template: TemplateSchema, templateVersion: z.literal(1),
   assetIds: z.array(key).max(LIMITS.selected).refine(ids => new Set(ids).size === ids.length), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
+  materialIds:z.array(key).max(LIMITS.candidates).refine(ids=>new Set(ids).size===ids.length).optional(),imageFrames:z.record(key,ImageFrameSchema).refine(value=>Object.keys(value).length<=LIMITS.candidates).optional(),
   seed: z.number().int().min(0).max(4294967295), palette: z.array(ColorSchema).min(1).max(8), paletteLocked: z.boolean(),
-  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]),sourceRanks:z.record(key,count).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}) });
+  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]),sourceRanks:z.record(key,count).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}) }).refine(value=>new Set([...value.assetIds,...value.materialIds||[]]).size<=LIMITS.candidates,{message:'Material pool exceeds budget'});
 export type Recipe = z.infer<typeof RecipeSchema>;
+export function recipeAssets(recipe:Recipe){return [...new Set([...recipe.assetIds,...recipe.materialIds||[]])];}
 export const AssetMetadataSchema = z.object({ id: key, fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   width: count.min(1).max(8192), height: count.min(1).max(8192), bytes: count,
-  colors: z.array(ColorSchema).max(8), sourceKey: key.optional(), label: z.string().max(200), createdAt: date,order:count.optional(),statistics:StatisticsSchema.optional() });
+  colors: z.array(ColorSchema).max(8), sourceKey: key.optional(), label: z.string().max(200), createdAt: date,order:count.optional(),statistics:StatisticsSchema.optional(),isSample:z.boolean().optional() });
 export type AssetMetadata = z.infer<typeof AssetMetadataSchema>;
 export interface ArtworkAsset extends AssetMetadata { blob: Blob; thumbnail: Blob }
 export const ProjectSchema = z.object({ version: z.literal(1), id: key, name: z.string().min(1).max(120),
@@ -99,7 +104,7 @@ export const ProjectSchema = z.object({ version: z.literal(1), id: key, name: z.
 export type Project = z.infer<typeof ProjectSchema>;
 export interface StoredProject extends Project { thumbnail?: Blob }
 export const PackageManifestSchema=z.object({format:z.literal('playlist-avatar'),version:z.union([z.literal(0),z.literal(1)]),project:z.unknown(),
-  assets:z.array(AssetMetadataSchema.extend({image:z.string(),thumbnail:z.string()}).strict()).max(LIMITS.selected)}).strict();
+  assets:z.array(AssetMetadataSchema.extend({image:z.string(),thumbnail:z.string()}).strict()).max(LIMITS.candidates)}).strict();
 
 export const ConnectionProfileSchema = z.object({ id: key, kind: z.enum(['subsonic', 'jellyfin', 'netease-api', 'qq-api']),
   name: z.string().min(1).max(120), implementation: z.string().max(128), address: z.string().max(2048).refine(value => {

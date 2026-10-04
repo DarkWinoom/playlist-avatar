@@ -2,13 +2,13 @@
 
 [完整中文说明](README.zh-CN.md)
 
-Turn a public NetEase Cloud Music or QQ Music playlist into an avatar or cover. Paste its share link, pick a style, adjust the artwork and download it. You can also start with the four original sample covers or your own images. The ordinary workflow needs no music account, API key or custom server address.
+Turn a public NetEase Cloud Music or QQ Music playlist into an avatar or cover. Open Import playlist, paste its share link, pick a style, adjust the artwork and download it. Start instantly with a composition made from colour, or use original sample covers and your own images. The ordinary workflow needs no music account, API key or custom server address.
 
 ![The editor with original sample artwork](docs/images/workbench-en.jpg)
 
-16 distinct styles include cover collages, print textures, generative compositions and optical materials. Export PNG, JPG or WebP at 512, 1024 or 2048 pixels, with optional circular cropping and transparent PNG/WebP backgrounds. Abstract styles use composition parameters and available source counts; they do not analyze audio.
+24 distinct styles include cover collages, print textures, generative compositions and optical materials. Export PNG, JPG or WebP at 512, 1024 or 2048 pixels, with optional circular cropping and transparent PNG/WebP backgrounds. Abstract styles use composition parameters and available source counts; they do not analyze audio.
 
-![Examples of the 16 templates](docs/images/templates.jpg)
+![Examples of the 24 templates](docs/images/templates.jpg)
 
 ## Start on your computer
 
@@ -35,13 +35,13 @@ Then open [http://127.0.0.1:18080](http://127.0.0.1:18080). On Windows you can c
 
 ## Make your first image
 
-1. The original example is editable as soon as the page opens. Try a template immediately.
-2. To use music covers, copy a **public playlist** share link or share text from NetEase or QQ Music. Paste it into **Playlist share content** and click **Read playlist**. A bare numeric ID may ask you to choose its platform.
-3. Check the returned title and counts. On an existing artwork, choose **Apply to artwork** when the new covers are ready. Unavailable covers and budget skips are reported; a failed or cancelled import preserves your artwork. Large playlists show their actual read range and may offer **Read next range**. Each range is a separate import.
-4. Choose a template and adjust its controls. Select/deselect materials and move them earlier/later. **Order and weighting** offers source order, available counts, shuffle and equal/count weighting; missing statistics are not invented. Undo/redo supports buttons and Ctrl/Cmd+Z.
+1. A new workspace starts with a colour composition that needs no images. These styles appear first until you supply photos or a playlist. Existing drafts and artworks reopen with their saved template.
+2. To use music covers, copy a **public playlist** share link or share text from NetEase or QQ Music. Click **Import playlist**, paste into the dialog and click **Read playlist**. A bare numeric ID may ask you to choose its platform.
+3. Check the returned title and counts. Choose **Use these covers** when the new covers are ready. Unavailable covers and budget skips are reported; a failed or cancelled import preserves your artwork. Large playlists show their actual read range and may offer **Next range**. Each range is a separate import.
+4. Choose a template and adjust its controls. Drag thumbnails to reorder them, or onto a cover in the canvas to replace or swap it. Unused materials stay in the library. **Reframe image** supports zoom, drag, direction buttons and arrow keys; **Arrange materials** offers source order, shuffle and available count weighting. Styles that need no images hide photo editing; missing statistics are not invented. Undo/redo supports buttons and Ctrl/Cmd+Z.
 5. Choose **Export**, select the size and format, and click **Download**. If your browser does not save automatically, use **Save image file** below the actual export preview. A circular preview is separate from the export's **Circular crop** setting. JPG uses the selected solid background.
 
-On a narrow screen, use the bottom **Import / Templates / Materials / Adjust** tools. Preferences provides English/Chinese, light/dark/system themes and reduced motion. Keyboard controls and the system's reduced-motion preference are supported.
+On a narrow screen, use the bottom **Playlist / Styles / Materials / Adjust** tools. Preferences provides English/Chinese, light/dark/system themes and reduced motion. Keyboard controls and the system's reduced-motion preference are supported.
 
 ## Save your work
 
@@ -49,7 +49,7 @@ On a narrow screen, use the bottom **Import / Templates / Materials / Adjust** t
 
 The library is specific to the **browser profile and website origin** (protocol, hostname and port). Another browser, device, port, `localhost` spelling or HTTP/HTTPS address has a separate library. The app is not an installed offline PWA; starting a fresh page still requires the application server.
 
-Use **Library → Backup** to download a ZIP containing the selected project's recipe and normalized materials. Use **Import artwork file** to restore a backup as a new project. Backup before clearing site data, moving addresses, changing browsers or updating the application. Connections and credentials are excluded from artwork packages. See [backup, updates and rollback](docs/maintenance.md).
+Use **Library → Backup** to download a ZIP containing the project's recipe, selected and unused normalized materials, and image framing. Use **Import artwork file** to restore a backup as a new project. Backup before clearing site data, moving addresses, changing browsers or updating the application. Connections and credentials are excluded from artwork packages. See [backup, updates and rollback](docs/maintenance.md).
 
 Deletion moves projects to the application's Trash after confirmation, where they can be restored. **Manage data → Works (including deleted)** permanently clears all named projects, including Trash, after a separate confirmation; it is not a Trash-only action. Clear-data controls let you choose scopes. A failed save or storage quota does not automatically delete saved artwork.
 
@@ -71,11 +71,11 @@ docker compose logs --tail 30
 The release candidate is available as locally built images; **no public registry URL has been published**. You can build from source with the command above, or load a supplied matching image archive:
 
 ```sh
-docker load -i playlist-avatar-0.1.0-amd64.tar.gz
+docker load -i playlist-avatar-0.1.1-amd64.tar.gz
 docker compose up -d --no-build
 ```
 
-For a 64-bit ARM host, load `playlist-avatar-0.1.0-arm64.tar.gz`, set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.1.0-arm64` in `.env`, and use the same `up -d --no-build` command. The image tags are local names, not downloadable registry addresses. See [release status and tested architectures](docs/release.md).
+The 0.1.1 ARM archive is built, but its runtime has not been validated in this update because this host cannot execute ARM emulation. For a native 64-bit ARM host, load `playlist-avatar-0.1.1-arm64.tar.gz`, set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.1.1-arm64` in `.env`, and use the same `up -d --no-build` command. The image tags are local names, not downloadable registry addresses. See [release status and tested architectures](docs/release.md).
 
 The default binding accepts connections from this computer only. For a NAS or another device, configure a trusted HTTPS reverse proxy, set `PUBLIC_ORIGIN` to its exact browser-facing origin, and expose the container only to that proxy. Browser storage and image hashing require a secure context: HTTPS, or a local loopback address. Plain `http://NAS-IP` is not the supported remote setup. The proxy must preserve the configured Host and the security headers. Do not mount your music library or Docker socket into this application. See [deployment options](docs/deployment.md).
 

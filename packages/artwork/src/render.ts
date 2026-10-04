@@ -1,4 +1,4 @@
-import type { Recipe } from '@playlist-avatar/contracts';
+import type { Recipe,ImageFrame } from '@playlist-avatar/contracts';
 import type { DrawingContext } from './index.ts';
 import { geometry, parameter, seeded } from './geometry.ts';
 import type { Tile } from './geometry.ts';
@@ -9,12 +9,14 @@ let materials: typeof import('./materials.ts') | undefined;
 export async function prepareRenderer(template: Recipe['template']) {
   if (CATALOG.find(item => item.id === template)!.group === 3) materials ??= await import('./materials.ts');
 }
-export interface RenderImage { image: CanvasImageSource; width: number; height: number }
+export interface RenderImage { image: CanvasImageSource; width: number; height: number;frame?:ImageFrame }
+export function cropWindow(iw:number,ih:number,width:number,height:number,frame:ImageFrame={x:0,y:0,zoom:1}){const ratio=Math.max(width/iw,height/ih)*frame.zoom,sw=width/ratio,sh=height/ratio;return{x:(iw-sw)*(frame.x+1)/2,y:(ih-sh)*(frame.y+1)/2,width:sw,height:sh};}
 export function cover(c: DrawingContext, image: RenderImage, x: number, y: number, width: number, height: number) {
-  const ratio = Math.max(width / image.width, height / image.height), sw = width / ratio, sh = height / ratio;
-  c.drawImage(image.image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, x, y, width, height);
+  const crop=cropWindow(image.width,image.height,width,height,image.frame);
+  c.drawImage(image.image,crop.x,crop.y,crop.width,crop.height,x,y,width,height);
 }
 export function render(c: DrawingContext, size: number, recipe: Recipe, images: Map<string, RenderImage>, tiles = geometry(recipe), transparent=false,weights:number[]=[1]) {
+  if(recipe.imageFrames)images=new Map([...images].map(([id,image])=>[id,{...image,frame:recipe.imageFrames?.[id]}]));
   c.clearRect(0, 0, size, size); c.save(); c.scale(size, size);
   const color = recipe.palette[0] || '#e7e1d5';
   const paper = `#${[1, 3, 5].map(i => Math.round(parseInt(color.slice(i, i + 2), 16) * .2 + 244 * .8).toString(16).padStart(2, '0')).join('')}`;
@@ -28,6 +30,7 @@ export function render(c: DrawingContext, size: number, recipe: Recipe, images: 
   if (recipe.template === 'film') { c.fillStyle='#21241f';if(!transparent)c.fillRect(0,0,1,1);else{c.fillRect(0,0,.15,1);c.fillRect(.85,0,.15,1);}c.filter=`brightness(${.6+parameter(recipe,'exposure',50)/100})`; }
   const group=CATALOG.find(item=>item.id===recipe.template)!.group;
   if(group===0||recipe.template==='film') drawTiles(c,tiles,images,recipe.palette,size);
+  if(recipe.template==='contact'){c.fillStyle=recipe.palette[Math.round(parameter(recipe,'ink',2))%recipe.palette.length]!;c.font='600 .018px monospace';c.textAlign='left';tiles.forEach((tile,i)=>c.fillText(`${String(i+1).padStart(2,'0')} —`,tile.x-tile.width/2,tile.y+tile.height/2+.022));}
   c.filter='none';
   if(group===1) printed(c,recipe,images);
   if(group===2) generated(c,recipe,transparent,weights);

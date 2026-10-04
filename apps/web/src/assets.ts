@@ -52,7 +52,7 @@ export async function originalAssets(): Promise<ArtworkAsset[]> {
     if (i === 1) { c.lineWidth = 56; c.strokeStyle = pair[1]!; c.beginPath(); c.ellipse(256, 420, 170, 300, -.3, 0, Math.PI * 2); c.stroke(); }
     if (i === 2) for (let r = 40; r < 720; r += 70) { c.lineWidth = 9; c.strokeStyle = pair[1]!; c.beginPath(); c.arc(0, 512, r, 0, Math.PI * 2); c.stroke(); }
     if (i === 3) { c.beginPath(); c.arc(512, 512, 350, 0, Math.PI * 2); c.fill(); }
-    assets.push(await normalizeAsset(await canvasBlob(canvas), `Original ${i + 1}`, true)); canvas.width = canvas.height = 0;
+    assets.push({...await normalizeAsset(await canvasBlob(canvas), `Original ${i + 1}`, true),isSample:true}); canvas.width = canvas.height = 0;
   }
   return assets;
 }

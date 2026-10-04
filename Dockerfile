@@ -1,5 +1,5 @@
 ARG NODE_IMAGE=node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
-FROM ${NODE_IMAGE} AS build
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS build
 WORKDIR /workspace
 RUN npm install --global pnpm@11.19.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json vitest.config.ts ./

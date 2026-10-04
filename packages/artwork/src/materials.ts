@@ -27,7 +27,7 @@ export function renderMaterial(c: DrawingContext, recipe: Recipe, images: Map<st
     if(!transparent){const bg=c.createLinearGradient(0,0,1,1);bg.addColorStop(0,ink(recipe,0));bg.addColorStop(1,ink(recipe,1));c.fillStyle=bg;c.fillRect(0,0,1,1);}
     const tiles=geometry(recipe);const count=tiles.length||Math.round(parameter(recipe,'layers',3));
     for(let i=0;i<count;i++){const tile=tiles[i]||{id:'',x:.5+(i-(count-1)/2)*.1,y:.5+(i-(count-1)/2)*.07,width:.6,height:.68,angle:(i-(count-1)/2)*.12};
-      c.save();c.translate(tile.x+Math.sin(phase)*.02,tile.y);c.rotate(tile.angle);c.beginPath();c.roundRect(-.3,-.34,.6,.68,radius);c.shadowColor='#05172766';c.shadowBlur=size*.035;c.shadowOffsetY=size*.012;c.fillStyle='#ffffff22';c.fill();c.shadowBlur=0;c.shadowOffsetY=0;c.clip();
+      c.save();c.translate(tile.x,tile.y);c.rotate(tile.angle);c.beginPath();c.roundRect(-.3,-.34,.6,.68,'radius'in tile?tile.radius:radius);c.shadowColor='#05172766';c.shadowBlur=size*.035;c.shadowOffsetY=size*.012;c.fillStyle='#ffffff22';c.fill();c.shadowBlur=0;c.shadowOffsetY=0;c.clip();
       const image=images.get(tile.id);if(image){c.globalAlpha=.65;cover(c,image,-.3+refraction*.05,-.34,.6,.68);c.globalAlpha=1;}
       const g=c.createLinearGradient(-.3,-.34,.3,.34);g.addColorStop(0,'#ffffffc0');g.addColorStop(.08+refraction*.2,'#ffffff18');g.addColorStop(.65,ink(recipe,i)+'22');g.addColorStop(1,'#caffff88');c.fillStyle=g;c.fillRect(-.3,-.34,.6,.68);
       c.strokeStyle='#ffffffbb';c.lineWidth=.012;c.beginPath();c.roundRect(-.293,-.333,.586,.666,radius);c.stroke();c.strokeStyle=ink(recipe,i)+'cc';c.lineWidth=.008;c.beginPath();c.roundRect(-.285,-.325,.57,.65,radius);c.stroke();c.restore();

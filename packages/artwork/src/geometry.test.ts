@@ -22,5 +22,6 @@ it('only prepares visible material at its actual projection', () => {
   const single = imageProjections({ ...many, parameters: { mosaic: { layout: 1 } } }, 2048);
   expect(single.size).toBe(1); expect(single.get('0')).toBe(2048);
   const sleeve = imageProjections({ ...many, template: 'sleeve', parameters: { sleeve: { count: 7 } } }, 2048);
-  expect(sleeve.size).toBe(7); expect(sleeve.get('0')).toBe(1280);
+  expect(sleeve.size).toBe(7); expect(sleeve.get('0')).toBeLessThanOrEqual(1280);
+  expect([...sleeve.values()].reduce((sum,value)=>sum+value*value*4,0)).toBeLessThanOrEqual(33554432);
 });

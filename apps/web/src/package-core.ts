@@ -1,5 +1,5 @@
 import { Unzip,UnzipInflate,Zip,ZipPassThrough,strToU8 } from 'fflate';
-import { AssetMetadataSchema,LIMITS,ProjectSchema,PackageManifestSchema } from '@playlist-avatar/contracts';
+import { AssetMetadataSchema,LIMITS,ProjectSchema,PackageManifestSchema,recipeAssets } from '@playlist-avatar/contracts';
 import type { ArtworkAsset,Project } from '@playlist-avatar/contracts';
 import { normalizeAsset } from './assets.ts';
 import { migrateProject } from './project-version.ts';
@@ -7,7 +7,7 @@ import { remapRecipeAssets } from './recipe-references.ts';
 const manifestSchema=PackageManifestSchema;
 export function validPackagePath(name:string){return name==='manifest.json'||/^(?:assets|thumbs)\/[a-f0-9]{64}\.png$/.test(name);}
 export async function writePackage(project:Project,assets:ArtworkAsset[]){
- const parsed=ProjectSchema.parse(project),selected=[...new Set(parsed.recipe.assetIds)].map(id=>assets.find(a=>a.id===id));if(selected.some(a=>!a))throw new Error('INVALID_PACKAGE');
+ const parsed=ProjectSchema.parse(project),selected=recipeAssets(parsed.recipe).map(id=>assets.find(a=>a.id===id));if(selected.some(a=>!a))throw new Error('INVALID_PACKAGE');
  const items=selected as ArtworkAsset[],manifest=manifestSchema.parse({format:'playlist-avatar',version:1,project:parsed,assets:items.map(a=>({...AssetMetadataSchema.parse(a),image:`assets/${a.fingerprint}.png`,thumbnail:`thumbs/${a.fingerprint}.png`}))});
  const text=strToU8(JSON.stringify(manifest));if(text.length>LIMITS.manifestBytes)throw new Error('INVALID_PACKAGE');
  const chunks:Uint8Array<ArrayBuffer>[]=[];let bytes=0;let finish!:()=>void,fail!:(error:unknown)=>void;const done=new Promise<void>((resolve,reject)=>{finish=resolve;fail=reject;});
@@ -26,7 +26,7 @@ export async function readPackage(file:Blob){
  const allowed=new Set(['manifest.json',...manifest.assets.flatMap(a=>[a.image,a.thumbnail])]);if(files.size!==allowed.size||[...files.keys()].some(name=>!allowed.has(name)))throw new Error('INVALID_PACKAGE');
  const {project,migrated}=migrateProject(manifest.project),assets:ArtworkAsset[]=[],mapping=new Map<string,string>();let preparedBytes=0;
  for(const item of manifest.assets){if(item.image!==`assets/${item.fingerprint}.png`||item.thumbnail!==`thumbs/${item.fingerprint}.png`)throw new Error('INVALID_PACKAGE');const raw=files.get(item.image);if(!raw||raw.size!==item.bytes)throw new Error('INVALID_PACKAGE');const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await raw.arrayBuffer()))].map(v=>v.toString(16).padStart(2,'0')).join('');if(hash!==item.fingerprint)throw new Error('INVALID_PACKAGE');
-   const asset=await normalizeAsset(raw,item.label,true,item.sourceKey);asset.statistics=item.statistics;asset.order=item.order;preparedBytes+=asset.bytes+asset.thumbnail.size;if(preparedBytes>LIMITS.candidateBytes)throw new Error('RESPONSE_TOO_LARGE');mapping.set(item.id,asset.id);if(!assets.some(a=>a.id===asset.id))assets.push(asset);
+   const asset=await normalizeAsset(raw,item.label,true,item.sourceKey);asset.statistics=item.statistics;asset.order=item.order;asset.isSample=item.isSample;preparedBytes+=asset.bytes+asset.thumbnail.size;if(preparedBytes>LIMITS.candidateBytes)throw new Error('RESPONSE_TOO_LARGE');mapping.set(item.id,asset.id);if(!assets.some(a=>a.id===asset.id))assets.push(asset);
  }
  const recipe=remapRecipeAssets(project.recipe,mapping);
  return {project:ProjectSchema.parse({...project,recipe}),assets,migrated};
