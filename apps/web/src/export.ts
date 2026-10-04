@@ -1,7 +1,8 @@
 import ExportWorker from './export.worker.ts?worker';
+import{recipeAssets}from'@playlist-avatar/contracts';
 import type { ArtworkAsset, ExportOptions, Recipe } from '@playlist-avatar/contracts';
 export async function exportArtwork(recipe: Recipe, assets: Record<string, ArtworkAsset>, options: ExportOptions) {
-  const snapshot = structuredClone(recipe), selected = snapshot.assetIds.map(id => assets[id]).filter((value): value is ArtworkAsset => !!value);
+  const snapshot = structuredClone(recipe), selected = recipeAssets(snapshot).map(id => assets[id]).filter((value): value is ArtworkAsset => !!value);
   if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') {
     const { renderExport } = await import('./export-render.ts'); return renderExport(snapshot, selected, options);
   }

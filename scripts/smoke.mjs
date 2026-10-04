@@ -1,6 +1,6 @@
 const url=new URL(process.argv[2]||'http://127.0.0.1:8080');
 if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.search||url.hash||url.pathname!=='/')throw Error('Use a bare application origin');
-const health=await fetch(new URL('/healthz',url),{signal:AbortSignal.timeout(10000)});if(!health.ok)throw Error('Health failed');const value=await health.json();if(value.status!=='ok'||value.version!=='0.1.1')throw Error('Health version failed');
+const health=await fetch(new URL('/healthz',url),{signal:AbortSignal.timeout(10000)});if(!health.ok)throw Error('Health failed');const value=await health.json();if(value.status!=='ok'||value.version!=='0.1.2')throw Error('Health version failed');
 const capabilities=await fetch(new URL('/api/v1/capabilities',url),{signal:AbortSignal.timeout(10000)});if(!capabilities.ok)throw Error('Capabilities failed');const config=await capabilities.json();if(config.limits.selected!==16||config.limits.candidates!==50)throw Error('Limits failed');
 const page=await fetch(url,{signal:AbortSignal.timeout(10000)}),html=await page.text();if(!page.ok||!html.includes('<div id="root">'))throw Error('Web application failed');
 if(page.headers.get('content-security-policy')?.includes("frame-ancestors 'none'")!==true)throw Error('Security headers failed');

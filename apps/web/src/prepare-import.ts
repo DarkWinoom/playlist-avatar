@@ -2,9 +2,9 @@ import type { ArtworkAsset } from '@playlist-avatar/contracts';
 import {LIMITS} from '@playlist-avatar/contracts';
 import type {Candidate} from './import-playlist.ts';
 import {normalizeAsset} from './assets.ts';
-export async function prepareImport(candidates:Candidate[],obsolete:()=>boolean){
+export async function prepareImport(candidates:Candidate[],obsolete:()=>boolean,limit:number=LIMITS.selected){
  const assets:ArtworkAsset[]=[];let bytes=0,skipped=0;
- for(const candidate of candidates.filter(value=>value.status==='ready').slice(0,LIMITS.selected)){
+ for(const candidate of candidates.filter(value=>value.status==='ready').slice(0,Math.min(limit,LIMITS.candidates))){
   if(obsolete())throw new Error('CANCELLED');
   try{const asset=await normalizeAsset(candidate.blob!,candidate.label,false,candidate.key);
    if(obsolete())throw new Error('CANCELLED');

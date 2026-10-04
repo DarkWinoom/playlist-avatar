@@ -87,13 +87,19 @@ export const AdvancedInputSchema=z.object({kind:z.enum(['playlist','recent-album
 const parameter = z.union([z.number().finite(), z.boolean(), z.string().max(128)]);
 export const ImageFrameSchema=z.object({x:z.number().finite().min(-1).max(1),y:z.number().finite().min(-1).max(1),zoom:z.number().finite().min(1).max(2)});
 export type ImageFrame=z.infer<typeof ImageFrameSchema>;
+export const SLOT_IDS=Array.from({length:LIMITS.selected},(_,i)=>`slot:${i}`);
 export const RecipeSchema = z.object({ version: z.literal(1), template: TemplateSchema, templateVersion: z.literal(1),
   assetIds: z.array(key).max(LIMITS.selected).refine(ids => new Set(ids).size === ids.length), parameters: z.partialRecord(TemplateSchema, z.record(z.string().max(32), parameter)),
   materialIds:z.array(key).max(LIMITS.candidates).refine(ids=>new Set(ids).size===ids.length).optional(),imageFrames:z.record(key,ImageFrameSchema).refine(value=>Object.keys(value).length<=LIMITS.candidates).optional(),
+  slotImages:z.record(key,key).refine(value=>Object.keys(value).every(id=>SLOT_IDS.includes(id))).optional(),
+  slotCount:z.number().int().min(1).max(LIMITS.selected).optional(),
   seed: z.number().int().min(0).max(4294967295), palette: z.array(ColorSchema).min(1).max(8), paletteLocked: z.boolean(),
-  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]),sourceRanks:z.record(key,count).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}) }).refine(value=>new Set([...value.assetIds,...value.materialIds||[]]).size<=LIMITS.candidates,{message:'Material pool exceeds budget'});
+  title: z.string().max(120), titleEnabled: z.boolean(), materialPhase: z.number().finite().min(0).max(1),weightMode:z.enum(['equal','occurrences','plays']).default('equal'),assetStats:z.record(key,StatisticsSchema).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}),sourceOrder:z.array(key).max(LIMITS.selected).default([]),sourceRanks:z.record(key,count).refine(value=>Object.keys(value).length<=LIMITS.selected).default({}) })
+  .refine(value=>value.slotImages===undefined||(value.assetIds.length===LIMITS.selected&&value.assetIds.every(id=>SLOT_IDS.includes(id))),{message:'Invalid canvas slots'})
+  .refine(value=>new Set([...(value.slotImages===undefined?value.assetIds:Object.values(value.slotImages)),...value.materialIds||[]]).size<=LIMITS.candidates,{message:'Material pool exceeds budget'});
 export type Recipe = z.infer<typeof RecipeSchema>;
-export function recipeAssets(recipe:Recipe){return [...new Set([...recipe.assetIds,...recipe.materialIds||[]])];}
+export function recipeAssets(recipe:Recipe){return [...new Set([...(recipe.slotImages===undefined?recipe.assetIds:Object.values(recipe.slotImages)),...recipe.materialIds||[]])];}
+export function slotAsset(recipe:Recipe,id:string){return recipe.slotImages===undefined?id:recipe.slotImages[id];}
 export const AssetMetadataSchema = z.object({ id: key, fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   width: count.min(1).max(8192), height: count.min(1).max(8192), bytes: count,
   colors: z.array(ColorSchema).max(8), sourceKey: key.optional(), label: z.string().max(200), createdAt: date,order:count.optional(),statistics:StatisticsSchema.optional(),isSample:z.boolean().optional() });

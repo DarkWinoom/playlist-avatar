@@ -1,3 +1,4 @@
+import{renderImages}from'./render-images.ts';
 import { render, imageInfo, imageProjections, prepareRenderer,artworkWeights } from '@playlist-avatar/artwork';
 import type { RenderImage } from '@playlist-avatar/artwork';
 import type { ArtworkAsset, ExportOptions, Recipe } from '@playlist-avatar/contracts';
@@ -11,13 +12,7 @@ export async function renderExport(recipe: Recipe, assets: ArtworkAsset[], optio
   if (!context) throw new Error('UNSUPPORTED_FORMAT');
   try {
     await prepareRenderer(recipe.template);
-    const projections = imageProjections(recipe, options.size);
-    for (const asset of assets) {
-      const dimension = projections.get(asset.id); if (!dimension) continue;
-      const ratio = Math.min(1, dimension / Math.max(asset.width, asset.height));
-      const image = await createImageBitmap(asset.blob, { resizeWidth: Math.max(1, Math.round(asset.width * ratio)), resizeHeight: Math.max(1, Math.round(asset.height * ratio)), resizeQuality: 'high' });
-      images.set(asset.id, { image, width: image.width, height: image.height });
-    }
+    const loaded=await renderImages(recipe,Object.fromEntries(assets.map(a=>[a.id,a])),options.size);loaded.forEach((image,id)=>images.set(id,image));
     render(context, options.size, recipe, images,undefined,options.transparent&&options.format!=='image/jpeg',artworkWeights(recipe,Object.fromEntries(assets.map(a=>[a.id,a]))));
     if (options.circle) { context.globalCompositeOperation = 'destination-in'; context.beginPath(); context.arc(options.size / 2, options.size / 2, options.size / 2, 0, Math.PI * 2); context.fill(); context.globalCompositeOperation = 'source-over'; }
     if (options.format === 'image/jpeg' || !options.transparent) { context.globalCompositeOperation = 'destination-over'; context.fillStyle = options.background; context.fillRect(0, 0, options.size, options.size); context.globalCompositeOperation = 'source-over'; }

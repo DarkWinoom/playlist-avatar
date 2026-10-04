@@ -7,8 +7,8 @@ export function parameter(recipe: Recipe, key: string, fallback: number) {
   return typeof value === 'number' ? Math.max(control?.min ?? -100, Math.min(control?.max ?? 100, value)) : fallback;
 }
 export function geometry(recipe: Recipe): Tile[] {
-  const ids = [...recipe.assetIds];
-  if(recipe.seed!==1701){const random=seeded(recipe.seed);for(let i=ids.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[ids[i],ids[j]]=[ids[j]!,ids[i]!];}}
+  const ids = recipe.slotImages===undefined?[...recipe.assetIds]:recipe.assetIds.slice(0,recipe.slotCount??LIMITS.selected);
+  if(recipe.slotImages===undefined&&recipe.seed!==1701){const random=seeded(recipe.seed);for(let i=ids.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[ids[i],ids[j]]=[ids[j]!,ids[i]!];}}
   if(recipe.template==='duo'){const balance=parameter(recipe,'balance',50)/100,gap=parameter(recipe,'gap',6)/200,tilt=parameter(recipe,'tilt',12)/100;return ids.slice(0,2).map((id,i)=>({id,x:i?balance+(1-balance)/2:balance/2,y:i?.55:.45,width:(i?1-balance:balance)-gap,height:.78,angle:i?-tilt:tilt,radius:.012,alpha:1}));}
   if(recipe.template==='focus')return ids.slice(0,2).map((id,i)=>{const inset=parameter(recipe,'inset',30)/100,offset=parameter(recipe,'offset',60)/100;return{id,x:i?.65+offset*.15:.43,y:i?.63+offset*.16:.45,width:i?inset:.7,height:i?inset:.78,angle:0,radius:parameter(recipe,'radius',12)/500,alpha:1};});
   if(recipe.template==='contact'){const n=Math.round(parameter(recipe,'columns',3)),gap=parameter(recipe,'gap',5)/100,cell=(1-gap*(n+1))/n;return ids.slice(0,n*n).map((id,i)=>({id,x:gap+cell/2+i%n*(cell+gap),y:gap+cell/2+Math.floor(i/n)*(cell+gap),width:cell,height:cell*.86,angle:0,radius:0,alpha:1}));}
@@ -31,7 +31,7 @@ export function geometry(recipe: Recipe): Tile[] {
   if (recipe.template === 'halftone') return ids.slice(0,1).map(id=>({id,x:.5,y:.5,width:1,height:1,angle:0,radius:0,alpha:1}));
   if (recipe.template === 'glass'){const phase=recipe.materialPhase*Math.PI*2+seeded(recipe.seed)()*Math.PI*2;return ids.slice(0,Math.round(parameter(recipe,'layers',3))).map((id,i,all)=>({id,x:.5+(i-(all.length-1)/2)*.09+Math.sin(phase)*.02,y:.5+(i-(all.length-1)/2)*.06,width:.6,height:.68,angle:(i-(all.length-1)/2)*.12,radius:parameter(recipe,'radius',45)/500,alpha:1}));}
   if (recipe.template !== 'mosaic') return [];
-  const columns = Math.max(1, Math.min(4, Math.round(parameter(recipe, 'layout', Math.ceil(Math.sqrt(Math.max(1, ids.length)))))));
+  const columns = Math.max(1, Math.min(4, Math.round(parameter(recipe, 'layout', recipe.slotImages===undefined?Math.ceil(Math.sqrt(Math.max(1, ids.length))):2))));
   const gap = parameter(recipe, 'gap', 3) / 200, radius = parameter(recipe, 'radius', 0) / 300;
   const cell = (1 - gap * (columns + 1)) / columns;
   return ids.slice(0, columns * columns).map((id, i) => ({ id, x: gap + cell / 2 + (i % columns) * (cell + gap),

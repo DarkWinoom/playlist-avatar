@@ -1,9 +1,9 @@
 import {useEffect,useRef,useState}from'react';
 import type{RefObject}from'react';
 import type{ArtworkAsset,Project}from'@playlist-avatar/contracts';
-import{freshRecipe,useEditor}from'./editor-store.ts';import{originalAssets}from'./assets.ts';import{recipeAssets}from'@playlist-avatar/contracts';
+import{studioRecipe,useEditor}from'./editor-store.ts';import{recipeAssets}from'@playlist-avatar/contracts';
 import{repository,storageMessage}from'./repository.ts';import{invalidateStorage,serializedStorage,storageEpoch}from'./storage-coordinator.ts';
-let originals:Promise<ArtworkAsset[]>|undefined;
+
 export function useWorkspacePersistence(chinese:boolean,operation:RefObject<number>,store=repository()){
  const[ready,setReady]=useState(false),[status,setStatus]=useState<'loading'|'saved'|'saving'|'dirty'|'error'>('loading'),[error,setError]=useState(''),[current,setCurrent]=useState<Project>();
  const locale=useRef(chinese);locale.current=chinese;const timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined),paused=useRef(false),currentRef=useRef<Project|undefined>(undefined);currentRef.current=current;
@@ -13,10 +13,10 @@ export function useWorkspacePersistence(chinese:boolean,operation:RefObject<numb
      const draft=await serializedStorage(()=>store.get('draft'));if(cancelled)return;
      if(token!==operation.current||initial!==useEditor.getState().revision){paused.current=true;setReady(true);setStatus('dirty');return;}
      if(draft)useEditor.getState().load(draft.project.recipe,draft.assets,draft.project.snapshot);
-else{originals??=originalAssets();const assets=await originals;if(cancelled)return;if(token!==operation.current||initial!==useEditor.getState().revision){paused.current=true;setReady(true);return;}useEditor.getState().load({...freshRecipe(assets.map(a=>a.id)),template:'aura'},assets);}
+else useEditor.getState().load(studioRecipe(),[]);
      setReady(true);setStatus(draft?'saved':'dirty');
-   }catch{paused.current=true;originals??=originalAssets();const assets=await originals;if(cancelled)return;
-     if(token===operation.current&&initial===useEditor.getState().revision)useEditor.getState().load(freshRecipe(assets.map(a=>a.id)),assets);
+   }catch{paused.current=true;if(cancelled)return;
+     if(token===operation.current&&initial===useEditor.getState().revision)useEditor.getState().load(studioRecipe(),[]);
      setReady(true);setStatus('error');setError(locale.current?'草稿无法恢复，旧记录已保留。可另存作品。':'Draft could not be restored; previous records retained. Save a copy to continue.');
    }})();return()=>{cancelled=true;cancelWrites();};
  },[]);
@@ -40,7 +40,7 @@ else{originals??=originalAssets();const assets=await originals;if(cancelled)retu
  async function open(id:string){cancelWrites();const token=operation.current,revision=useEditor.getState().revision,value=await serializedStorage(()=>store.get(id));
    if(token!==operation.current||revision!==useEditor.getState().revision)return;if(!value)throw new Error('INVALID_PACKAGE');useEditor.getState().load(value.project.recipe,value.assets,value.project.snapshot);setCurrent(value.project);
  }
- async function clear(scopes:{draft:boolean;projects:boolean;connections:boolean}){cancelWrites();await serializedStorage(()=>store.clear(scopes));if(scopes.draft){paused.current=false;setStatus('dirty');setError('');}if(scopes.projects)setCurrent(undefined);}
+ async function clear(scopes:{draft:boolean;projects:boolean;connections:boolean;images?:boolean}){cancelWrites();await serializedStorage(()=>store.clear(scopes));if(scopes.draft){paused.current=false;setStatus('dirty');setError('');}if(scopes.projects)setCurrent(undefined);}
  const label=status==='saved'?(chinese?'草稿已保存':'Draft saved'):status==='saving'?(chinese?'正在保存…':'Saving…'):status==='error'?(chinese?'保存失败':'Save failed'):status==='loading'?(chinese?'正在恢复…':'Restoring…'):(chinese?'尚未保存':'Unsaved');
  return{ready,status,label,error,current,save,open,clear,setCurrent,cancelWrites};
 }

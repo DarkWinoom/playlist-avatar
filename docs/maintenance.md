@@ -23,11 +23,11 @@ After backing up, give the current image an explicit rollback tag:
 备份后，给当前镜像保留一个明确回退名称：
 
 ```sh
-docker tag playlist-avatar:0.1.1-local playlist-avatar:before-update
+docker tag playlist-avatar:0.1.2-local playlist-avatar:before-update
 docker compose stop
 ```
 
-If your selected image is `playlist-avatar:0.1.1-arm64`, use that tag as the first argument to `docker tag` instead. 若当前使用ARM镜像，上一条docker tag的第一个参数改为 `playlist-avatar:0.1.1-arm64`。
+If your selected image is `playlist-avatar:0.1.2-arm64`, use that tag as the first argument to `docker tag` instead. 若当前使用ARM镜像，上一条docker tag的第一个参数改为 `playlist-avatar:0.1.2-arm64`。
 
 Replace the source files with the approved new version while retaining your private `.env`, then run:
 

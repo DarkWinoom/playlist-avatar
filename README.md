@@ -2,7 +2,7 @@
 
 [完整中文说明](README.zh-CN.md)
 
-Turn a public NetEase Cloud Music or QQ Music playlist into an avatar or cover. Open Import playlist, paste its share link, pick a style, adjust the artwork and download it. Start instantly with a composition made from colour, or use original sample covers and your own images. The ordinary workflow needs no music account, API key or custom server address.
+Turn a public NetEase Cloud Music or QQ Music playlist into an avatar or cover. Choose a style, adjust a few parameters and download your artwork. Styles with photos start with original illustrations; import covers into your image library and drag the pictures you want onto the canvas. The ordinary workflow needs no music account, API key or custom server address.
 
 ![The editor with original sample artwork](docs/images/workbench-en.jpg)
 
@@ -35,13 +35,15 @@ Then open [http://127.0.0.1:18080](http://127.0.0.1:18080). On Windows you can c
 
 ## Make your first image
 
-1. A new workspace starts with a colour composition that needs no images. These styles appear first until you supply photos or a playlist. Existing drafts and artworks reopen with their saved template.
-2. To use music covers, copy a **public playlist** share link or share text from NetEase or QQ Music. Click **Import playlist**, paste into the dialog and click **Read playlist**. A bare numeric ID may ask you to choose its platform.
-3. Check the returned title and counts. Choose **Use these covers** when the new covers are ready. Unavailable covers and budget skips are reported; a failed or cancelled import preserves your artwork. Large playlists show their actual read range and may offer **Next range**. Each range is a separate import.
-4. Choose a template and adjust its controls. Drag thumbnails to reorder them, or onto a cover in the canvas to replace or swap it. Unused materials stay in the library. **Reframe image** supports zoom, drag, direction buttons and arrow keys; **Arrange materials** offers source order, shuffle and available count weighting. Styles that need no images hide photo editing; missing statistics are not invented. Undo/redo supports buttons and Ctrl/Cmd+Z.
-5. Choose **Export**, select the size and format, and click **Download**. If your browser does not save automatically, use **Save image file** below the actual export preview. A circular preview is separate from the export's **Circular crop** setting. JPG uses the selected solid background.
+1. Choose a style. Colour compositions need no images. Photo styles have fixed positions filled with original illustrations, so no pictures are required to begin.
+2. For photo styles, open **Images** or **Choose images**. **Upload images** adds local PNG/JPEG/WebP files; **Import playlist** opens the public share dialog. Read, then choose **Add to image library**. Importing preserves your current style and artwork.
+3. Select the pictures for this work and choose **Use selected images**. Select none to use illustrations. Drag a picture from the single row into a canvas position. One picture can be used in several positions; the row shows where each is displayed. You can also select a picture, then click a position.
+4. Adjust the style parameters. Where available, **Composition number** identifies a repeatable variation: the same number and parameters produce the same result. **Reset parameters** restores the defaults while keeping your pictures and placements. Click a placed image to reframe it. Undo/redo supports buttons and Ctrl/Cmd+Z.
+5. Choose **Export**, select the size and format, and click **Download**. Use **Save image file** if needed. Circular preview and export's **Circular crop** are separate. JPG uses a solid background.
 
-On a narrow screen, use the bottom **Playlist / Styles / Materials / Adjust** tools. Preferences provides English/Chinese, light/dark/system themes and reduced motion. Keyboard controls and the system's reduced-motion preference are supported.
+The image library is shared by your works in the same browser origin. Removing an image requires confirmation and preserves images already used in saved works. **Manage local data** has separate scopes for works and the image library. Existing works retain their original appearance when reopened; switching styles or resetting uses the current defaults. A backup contains only the current work's chosen and placed pictures, not the entire image library.
+
+On a narrow screen, use **Styles / Images / Adjust**. Preferences provides English/Chinese, themes and reduced motion. There are no free colour, general title, picture-sort or weighting controls in the editor. The Type style retains its own lettering parameter.
 
 ## Save your work
 
@@ -71,11 +73,11 @@ docker compose logs --tail 30
 The release candidate is available as locally built images; **no public registry URL has been published**. You can build from source with the command above, or load a supplied matching image archive:
 
 ```sh
-docker load -i playlist-avatar-0.1.1-amd64.tar.gz
+docker load -i playlist-avatar-0.1.2-amd64.tar.gz
 docker compose up -d --no-build
 ```
 
-The 0.1.1 ARM archive is built, but its runtime has not been validated in this update because this host cannot execute ARM emulation. For a native 64-bit ARM host, load `playlist-avatar-0.1.1-arm64.tar.gz`, set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.1.1-arm64` in `.env`, and use the same `up -d --no-build` command. The image tags are local names, not downloadable registry addresses. See [release status and tested architectures](docs/release.md).
+The 0.1.2 ARM archive is built, but its runtime has not been validated in this update because this host cannot execute ARM emulation. For a native 64-bit ARM host, load `playlist-avatar-0.1.2-arm64.tar.gz`, set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.1.2-arm64` in `.env`, and use the same `up -d --no-build` command. The image tags are local names, not downloadable registry addresses. See [release status and tested architectures](docs/release.md).
 
 The default binding accepts connections from this computer only. For a NAS or another device, configure a trusted HTTPS reverse proxy, set `PUBLIC_ORIGIN` to its exact browser-facing origin, and expose the container only to that proxy. Browser storage and image hashing require a secure context: HTTPS, or a local loopback address. Plain `http://NAS-IP` is not the supported remote setup. The proxy must preserve the configured Host and the security headers. Do not mount your music library or Docker socket into this application. See [deployment options](docs/deployment.md).
 

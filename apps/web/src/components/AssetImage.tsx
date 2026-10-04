@@ -1,2 +1,2 @@
 import{useEffect,useState}from'react';import type{ArtworkAsset}from'@playlist-avatar/contracts';
-export function AssetImage({asset}:{asset:ArtworkAsset}){const[url,setUrl]=useState('');useEffect(()=>{const next=URL.createObjectURL(asset.thumbnail);setUrl(next);return()=>URL.revokeObjectURL(next);},[asset.thumbnail]);return url?<img src={url} alt={asset.label} draggable={false}/>:null;}
+export function AssetImage({asset}:{asset:Pick<ArtworkAsset,"thumbnail"|"label">}){const[url,setUrl]=useState('');useEffect(()=>{const next=URL.createObjectURL(asset.thumbnail);setUrl(next);return()=>URL.revokeObjectURL(next);},[asset.thumbnail]);return url?<img src={url} alt={asset.label} draggable={false}/>:null;}

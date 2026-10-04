@@ -1,4 +1,30 @@
-# 0.1.1 acceptance candidate / 验收候选
+# 0.1.2 acceptance candidate / 验收候选
+
+The editor now separates style parameters, fixed canvas positions and the image library. No-photo styles show no image/source tools. Photo styles use original illustrations until a picture is explicitly placed; choosing zero or one picture does not alter the layout. Imported pictures only enter the library. General colour/title, random, sort and weighting controls have been removed; repeatable composition numbers and Reset parameters replace hidden random changes.
+
+编辑器分为风格参数、固定画布位置与独立图片库。无图风格没有图片/来源工具；有图风格默认填充原创插画，选零张或一张图不改布局。导入只入库；去掉通用颜色/标题、随机、排序和权重操作，构图编号可复现，提供恢复默认参数。
+
+| Scope / 范围 | Actual evidence / 本轮结果 |
+| --- | --- |
+| Checks | 69 tests / 19 files, types/build and 56 runtime notices pass. JS gzip196.70kB, CSS7.47kB. |
+| Geometry | 0/1/multiple image choices keep the same positions; same image may occupy several slots, each with independent framing. |
+| Output | 24 default512px PNGs repeat pixel-exactly; HTML/Offscreen paths match. All17 styles with composition numbers change with a different number; other7 hide that control. Six actual2048 JPEG/WebP production-worker exports pass. |
+| Library | DBv1→v2 preserves old work; work clearing retains library; removing a library image retains saved-work blobs. Linked project/library imports roll back on cancellation or the1000-entry library cap. |
+| Backup | ZIP contains only this work's real pictures, no virtual slot files or unrelated library; repeated placement and per-slot crop restore. |
+| Browser | Actual desktop drag/tap placement, multi-position reuse and Undo; uploaded2 original images and reopened named work with positions/pool intact. Real NetEase613 tracks/9 covers imported into library without changing current Mosaic, parameters, placements or chosen3 pictures. 375px layout inspected. |
+| Images | playlist-avatar:0.1.2-local is built for amd64. ARM runtime remains unverified on this host; original baseline archives are retained. |
+
+New drafts use fixed slots. Old recipes retain their stored appearance until an explicit style change/reset or image-placement operation converts them; their explicit layout, source metadata and saved blobs are retained. Native stats remain data in the library/backup rather than new editor controls. Image library capacity is up to1000 items within the existing500MiB browser storage budget; a work may choose50 pictures and display at most16 positions. The ordinary normalized import batch remains32MiB, working picture/history cache64MiB and prepared bitmaps64MiB.
+
+新草稿采用固定槽位，旧作品保留原效果；用户明确切风格、重置或放图才转换。显式布局、来源数据与Blob保留；统计作为数据保留，不增加编辑操作。图片库最多1000条且总预算仍500MiB，本次最多选50张、画布最多16位置；普通规范化导入批次32MiB、工作素材/历史64MiB和位图64MiB预算保持。
+
+Real advanced instances, physical phones/touch/IME/screen readers, Firefox/Safari and updated full-browser/GPU/20-round resource measurements are still unverified. Previous performance and two-architecture results below are historical. No public release or license decision is inferred; project code remains UNLICENSED and no push/upload has occurred.
+
+真实高级实例、真机/触控/输入法/读屏、Firefox/Safari与新版整页/GPU/20轮资源测量仍未验证。下文旧性能与双架构结果仅为历史；未公开发布，UNLICENSED、未推送/上传。
+
+---
+
+# 0.1.1 historical candidate / 历史候选
 
 The current local candidate adds a refined workbench, playlist import dialog, 24 compositions and direct photo editing. New workspaces start with Aura; existing drafts retain their saved template. Unused materials remain available and are included with image framing in saved works and ZIP backups. The previous 0.1.0 images and archives are retained as a rollback baseline.
 

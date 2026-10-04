@@ -30,5 +30,5 @@ export function usesImages(id:TemplateId){return ['mosaic','sleeve','disc','wall
 export const FEATURED: TemplateId[] = ['mosaic','sleeve','disc','film','aura','orbit','glass','eclipse'];
 export function controlsFor(recipe: Recipe) {
   return CATALOG.find(item => item.id === recipe.template)!.controls.map(control => ({ ...control,
-    value: recipe.template === 'mosaic' && control.key === 'layout' ? Math.ceil(Math.sqrt(Math.max(1, recipe.assetIds.length))) : control.value }));
+    value: recipe.slotImages===undefined&&recipe.template === 'mosaic' && control.key === 'layout' ? Math.ceil(Math.sqrt(Math.max(1, recipe.assetIds.length))) : control.value }));
 }

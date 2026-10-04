@@ -1,3 +1,4 @@
+import{renderImages}from'../render-images.ts';
 import { useEffect, useRef, useState } from 'react';
 import type{ReactNode}from'react';
 import { geometry, interpolateTiles, render, imageProjections, prepareRenderer, CATALOG,artworkWeights } from '@playlist-avatar/artwork';
@@ -13,7 +14,7 @@ export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, 
   const painted=useRef(false);
   const measured=useRef(false);
   const visible = useRef<Tile[]>([]); const lastTemplate = useRef(recipe.template);
-  const projections = imageProjections(recipe, size), projectionKey = [...projections].map(([id, value]) => `${id}:${value}`).join('|');
+  const projections = imageProjections(recipe, size), projectionKey = [...projections].map(([id, value]) => `${id}:${recipe.slotImages?.[id]||""}:${value}`).join('|');
   useEffect(() => { const element = holder.current!;
     const observer = new ResizeObserver(entries => { const width = entries[0]?.contentRect.width || 320; setSize(Math.min(1280, Math.max(256, Math.round(width * Math.min(2, window.devicePixelRatio))))); });
     observer.observe(element); return () => observer.disconnect(); }, []);
@@ -22,11 +23,7 @@ export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, 
     void (async () => {
       try {
         await prepareRenderer(recipe.template); if(obsolete) return;
-        for (const [id, projection] of projections) { const asset = assets[id]; if (!asset) continue;
-          const scale = Math.min(1, projection / Math.max(asset.width, asset.height));
-          const image = await createImageBitmap(asset.blob, { resizeWidth: Math.max(1, Math.round(asset.width * scale)), resizeHeight: Math.max(1, Math.round(asset.height * scale)), resizeQuality: 'high' });
-          if (obsolete) { image.close(); break; } prepared.set(id, { image, width: image.width, height: image.height });
-        }
+        const loaded=await renderImages(recipe,assets,size,()=>obsolete);loaded.forEach((image,id)=>prepared.set(id,image));
         if (!obsolete) { committed = true; setImages(prepared); setReady(recipe.template); }
       } catch { prepared.forEach(value => (value.image as ImageBitmap).close()); }
     })();
@@ -48,7 +45,7 @@ export function ArtworkCanvas({ recipe, assets, reduce, circle, direct = false, 
       if (targetCanvas) { context.clearRect(0,0,size,size); context.drawImage(targetCanvas,0,0); }
       else render(context, size, recipe, images, tiles,false,artworkWeights(recipe,assets));
       painted.current=true;
-      if(images.size&&!measured.current){performance.mark('playlist-avatar:preview-ready');element.dataset.readyMs=performance.now().toFixed(1);measured.current=true;}
+      if(!measured.current){performance.mark('playlist-avatar:preview-ready');element.dataset.readyMs=performance.now().toFixed(1);measured.current=true;}
       onFrame?.(performance.now());
       if(crossing&&progress<1){context.globalAlpha=1-progress;context.drawImage(previous,0,0,size,size);context.globalAlpha=1;}
       if(checks)small.current.forEach(check=>{if(check){const c=check.getContext('2d');c?.clearRect(0,0,check.width,check.height);c?.drawImage(element,0,0,check.width,check.height);}});
