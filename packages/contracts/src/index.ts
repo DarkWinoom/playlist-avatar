@@ -100,14 +100,20 @@ export const RecipeSchema = z.object({ version: z.literal(1), template: Template
 export type Recipe = z.infer<typeof RecipeSchema>;
 export function recipeAssets(recipe:Recipe){return [...new Set([...(recipe.slotImages===undefined?recipe.assetIds:Object.values(recipe.slotImages)),...recipe.materialIds||[]])];}
 export function slotAsset(recipe:Recipe,id:string){return recipe.slotImages===undefined?id:recipe.slotImages[id];}
+export const WorkspaceSchema=z.object({version:z.literal(1),flow:z.enum(['quick','legacy']),editingId:key.optional(),
+  variants:z.partialRecord(TemplateSchema,RecipeSchema),origins:z.partialRecord(TemplateSchema,RecipeSchema)}).strict();
+export type Workspace=z.infer<typeof WorkspaceSchema>;
+export function workspaceAssets(recipe:Recipe,workspace?:Workspace){return [...new Set([recipe,...Object.values(workspace?.variants||{}),...Object.values(workspace?.origins||{})].flatMap(value=>value?recipeAssets(value):[]))];}
 export const AssetMetadataSchema = z.object({ id: key, fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   width: count.min(1).max(8192), height: count.min(1).max(8192), bytes: count,
   colors: z.array(ColorSchema).max(8), sourceKey: key.optional(), label: z.string().max(200), createdAt: date,order:count.optional(),statistics:StatisticsSchema.optional(),isSample:z.boolean().optional() });
 export type AssetMetadata = z.infer<typeof AssetMetadataSchema>;
 export interface ArtworkAsset extends AssetMetadata { blob: Blob; thumbnail: Blob }
 export const ProjectSchema = z.object({ version: z.literal(1), id: key, name: z.string().min(1).max(120),
-  createdAt: date, updatedAt: date, recipe: RecipeSchema, snapshot: SourceSnapshotSchema.optional() });
+  createdAt: date, updatedAt: date, recipe: RecipeSchema, snapshot: SourceSnapshotSchema.optional(),workspace:WorkspaceSchema.optional() })
+  .refine(value=>workspaceAssets(value.recipe,value.workspace).length<=LIMITS.candidates,{message:'Workspace material pool exceeds budget'});
 export type Project = z.infer<typeof ProjectSchema>;
+export function projectAssets(project:Project){return workspaceAssets(project.recipe,project.workspace);}
 export interface StoredProject extends Project { thumbnail?: Blob }
 export const PackageManifestSchema=z.object({format:z.literal('playlist-avatar'),version:z.union([z.literal(0),z.literal(1)]),project:z.unknown(),
   assets:z.array(AssetMetadataSchema.extend({image:z.string(),thumbnail:z.string()}).strict()).max(LIMITS.candidates)}).strict();
