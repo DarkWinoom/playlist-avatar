@@ -1,0 +1,2 @@
+import{useEffect,useState}from'react';
+export function BlobImage({blob,alt='',className=''}:{blob?:Blob;alt?:string;className?:string}){const[url,setUrl]=useState('');useEffect(()=>{if(!blob){setUrl('');return;}const value=URL.createObjectURL(blob);setUrl(value);return()=>URL.revokeObjectURL(value);},[blob]);return url?<img className={className} src={url} alt={alt} loading="lazy" decoding="async"/>:<span className={`room-cover-placeholder ${className}`} aria-hidden="true"/>;}
