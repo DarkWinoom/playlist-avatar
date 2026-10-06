@@ -3,7 +3,7 @@
 ## Before changing anything / 变更前
 
 1. In the old browser and old URL, save any draft you want to keep as a named project.
-2. In Library, download each project's Backup ZIP to a folder outside browser storage. Save screenshots/finished images separately if needed.
+2. On the collection, use each cover's menu to download its Back up package ZIP to a folder outside browser storage. Save screenshots/finished images separately if needed.
 3. Test one backup by importing it. The import creates a new project and preserves the original; open the copy and generate an image.
 4. Record the exact old URL, browser profile, source version and image tag. Keep the old image or archive until the new version is accepted.
 
@@ -23,11 +23,11 @@ After backing up, give the current image an explicit rollback tag:
 备份后，给当前镜像保留一个明确回退名称：
 
 ```sh
-docker tag playlist-avatar:0.1.2-local playlist-avatar:before-update
+docker tag playlist-avatar:0.2.0-local playlist-avatar:before-update
 docker compose stop
 ```
 
-If your selected image is `playlist-avatar:0.1.2-arm64`, use that tag as the first argument to `docker tag` instead. 若当前使用ARM镜像，上一条docker tag的第一个参数改为 `playlist-avatar:0.1.2-arm64`。
+If your selected image is `playlist-avatar:0.2.0-arm64`, use that tag as the first argument to `docker tag` instead. 若当前使用ARM镜像，上一条docker tag的第一个参数改为 `playlist-avatar:0.2.0-arm64`。
 
 Replace the source files with the approved new version while retaining your private `.env`, then run:
 
@@ -52,9 +52,9 @@ Stop the new version and set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:before-updat
 docker compose up -d --no-build
 ```
 
-An old application may not understand records written by a newer storage format. Keep pre-update ZIP backups. Import a supported backup as a copy, or temporarily use a separate origin/browser profile to inspect it without clearing the original library. Do not assume container rollback also rolls back IndexedDB. A future migration must preserve original records; this candidate supports its version1 format and a guarded legacy version0 copy migration.
+An old application may not understand records written by a newer storage format. Keep pre-update ZIP backups. Import a supported backup as a copy, or temporarily use a separate origin/browser profile to inspect it without clearing the original library. Do not assume container rollback also rolls back IndexedDB. This update migrates IndexedDB to version3 while preserving old recipes and Blobs. Version0.1.2 and earlier may fail to open the newer database on the same origin; use a pre-update ZIP in a separate origin/profile for rollback. Recipe/package version1 and guarded version0 copy migration remain supported.
 
-旧应用不一定能读取新存储格式，请保留更新前的ZIP。将受支持备份恢复为副本，或用独立origin/浏览器配置文件检查，避免清空原库。容器回退不会同步回退IndexedDB。后续迁移需保留原记录；当前候选支持v1格式，以及保留原数据的v0复制迁移。
+旧应用不一定能读取新存储格式，请保留更新前的ZIP。将受支持备份恢复为副本，或用独立origin/浏览器配置文件检查，避免清空原库。容器回退不会同步回退IndexedDB。本轮数据库升至v3并保留旧配方与Blob。0.1.2及更早版本可能无法在同一origin打开新版数据库；回退时在独立origin/配置文件使用更新前ZIP。配方/作品包v1与v0复制迁移仍受支持。
 
 ## Move browser/address / 换浏览器或地址
 
@@ -62,9 +62,9 @@ Export at the old address first. Open the new deployment/browser, then import th
 
 先在旧地址导出，再在新部署/浏览器导入。`http://127.0.0.1:8080`、`http://localhost:8080`、`http://127.0.0.1:18080`及HTTPS域名是不同origin，应用不会自动发现或搬运其他浏览器的存储。
 
-Artwork packages contain selected normalized PNGs, generated thumbnails and recipe/source metadata. They exclude passwords, Last.fm keys, upstream cookies and remembered connection tokens. Imports enforce192MiB compressed input,256MiB expanded content,128entries,1MiB manifest and20MiB per material entry; unknown paths, duplicate entries and inconsistent references are rejected. A successful restore is a new project with remapped fingerprints, source positions and weights.
+Artwork packages contain referenced normalized PNGs, generated thumbnails, recipe/source metadata, per-template variants and restoration baselines; they do not contain the whole image library. They exclude passwords, Last.fm keys, upstream cookies and remembered connection tokens. Imports enforce192MiB compressed input,256MiB expanded content,128entries,1MiB manifest and20MiB per material entry; unknown paths, duplicate entries and inconsistent references are rejected. A successful restore is a new project with remapped fingerprints, source positions and weights.
 
-作品包包含所选规范化PNG、缩略图及配方/来源元数据，不含密码、Last.fm Key、上游Cookie和记住的连接令牌。导入限制为192MiB输入、256MiB展开、128条目、1MiB manifest及单素材条目20MiB；未知路径、重复条目和不一致引用会被拒绝。恢复新建作品，并同步映射指纹、来源位置和权重。
+作品包包含引用的规范化PNG、缩略图、配方/来源元数据、各模板变体及恢复基线，不包含整个图片库，不含密码、Last.fm Key、上游Cookie和记住的连接令牌。导入限制为192MiB输入、256MiB展开、128条目、1MiB manifest及单素材条目20MiB；未知路径、重复条目和不一致引用会被拒绝。恢复新建作品，并同步映射指纹、来源位置和权重。
 
 ## Forget connections / 忘记连接
 

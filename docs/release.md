@@ -1,3 +1,39 @@
+# 0.2.0 listening-room candidate / 听音室验收候选
+
+The listening room replaces the previous editor: a cover collection, light/dark themes and one continuous studio. Templates remain on the left, the canvas in the middle, effects on the right, and an automatically grouped image grid below photo templates. No-image templates skip image tools. Random effect records only visible parameters; Undo/reset and per-template state make results recoverable.
+
+听音室取代旧编辑界面：作品架、深浅主题与常驻制作台。左模板、中画布、右效果；有图模板下方按最近/歌单/上传/作品直接展示图片网格，无图隐藏图片操作。随机只回写可见参数，可撤销/恢复默认，切换模板保留各自状态。
+
+| Scope / 范围 | Actual evidence / 本轮结果 |
+| --- | --- |
+| Checks | 77 tests /20 files, types, production builds and56 runtime notices pass; frozen dependencies. |
+| Preview / output | Film, Duo, Glass and legacy framed Duo preview pixels match512px PNG exactly. Actual UI verifies nine format/size combinations; the production worker exports the retained old Wall at2048 in PNG/JPEG/WebP. Transparent circular PNG and opaque JPEG corners pass. |
+| Storage / packages | DBv1/v2→v3 preserves old recipes/Blobs and original PNGs. Full workspace ZIP preserves dormant variants and restoration baselines, remaps assets and clears foreign editing identity. Save/reload identity, quota/rollback and1000-entry library limits are exercised. |
+| Real public imports | NetEase613 tracks/9 covers, QQ1261 tracks/50 covers, anonymously read into their playlist groups without changing the current Mosaic. Image pages contain24 pictures, last QQ page2. |
+| Interaction / motion | Single pending click/place, actual pointer drag, same image in multiple slots, new/default vs edit/original restore, random/Undo, work rename/order/trash-confirm/recover and ZIP import/reload. The base canvas remains unchanged until the cropped cover lands; selecting another pending picture does not terminate the flight. Short template/tab/button/result/shelf transitions stop when reduced motion is enabled. |
+| Layout | Desktop Chromium viewports320/375/768/1280, independent scroll areas and accessible Finish; light/dark and English/Chinese screenshots. This is not physical-phone/touch coverage. |
+| Resource evidence | Real compressed HTTP static import closure: home JS154534B, studio JS178551B, CSS14989B, including shared chunks. Dynamic workers, optional materials and image bytes are separate.39 decoded preview/export bitmaps released to zero in the targeted harness. No new whole-browser/GPU peak or20-round frame-performance claim. |
+| Local runtime | playlist-avatar:0.2.0-local, amd64, healthy at18080;0.2.0 health/static/gzip/capabilities/security smoke passed. Original named Acceptance example and Wall12 positions/60-12-0 draft remain. |
+| ARM | playlist-avatar:0.2.0-arm64 built and archived; current host cannot execute its ARM runtime, so native ARM/NAS operation remains unverified. |
+
+Home has no upward entrance or constant paper rhythm. Photo-flight crops come from the actual final rendered tile and retain its aspect ratio and angle. Actual loading has a full-screen state only while storage/components are pending. Existing template IDs and recipe/package version1 remain compatible; opening an old work does not silently rewrite its appearance.
+
+首页没有从下向上的入场或持续纸面律动。图片飞行使用最终渲染裁切，保持比例和角度；只在真实存储/组件等待期间显示全屏加载。原模板ID与配方/作品包v1保持兼容，打开旧作品不静默改写效果。
+
+Database version3 adds automatic source collections. An older0.1.2 application may not open a newer database on the same origin; keep pre-update ZIPs and use a separate origin/profile when rolling back. Workspaces retain at most50 unique pictures across current recipe, variants and baselines, within the existing64MiB working-material budget; the library remains capped at1000 pictures and total browser storage500MiB. Ordinary normalized import batches remain32MiB and a canvas has at most16 positions.
+
+数据库v3增加自动来源归集，旧0.1.2可能无法在同一origin打开新版数据库；回退需保留更新前ZIP并使用独立origin/配置文件。当前配方、变体和恢复基线共最多50张不同图片，工作素材预算64MiB；图库仍最多1000张、浏览器总预算500MiB。普通规范化导入批次32MiB，画布最多16位置。
+
+The local0.2.0 source/amd64/arm64 archives and SHA256SUMS are supplied alongside the retained0.1.0–0.1.2 packages. Both architecture builds run checks in the native build stage; an ARM build is not an ARM runtime test. Source excludes local planning/evidence, credentials, Git history and generated dependencies. Runtime images contain the web/server and third-party notices.
+
+本地提供0.2.0源码/amd64/arm64归档与SHA256SUMS，0.1.0–0.1.2原包保留。两架构在原生构建阶段运行检查，ARM构建不代表ARM运行通过。源码不含本地方案/证据、凭据、Git历史或生成依赖；运行镜像包含网页/服务和第三方许可。
+
+Real advanced instances, physical devices/touch/IME/screen readers, Firefox/Safari, native ARM/NAS and total browser/worker/GPU peaks remain unverified. Background-tab animation cancellation is code-reviewed; reduced-motion cancellation was observed. CUA download-event helpers timed out, while the product's real encoded previews and save links were present. No hosted CI, public registry, push/upload or project license selection is claimed; project-owned code remains UNLICENSED and owner acceptance is pending. The performance measurements in the historical sections below remain historical.
+
+真实高级实例、真机/触控/输入法/读屏、Firefox/Safari、原生ARM/NAS与浏览器/worker/GPU总峰值仍未验证。后台动效取消为源码审查，减少动效取消已实测；CUA下载事件辅助超时，但产品真实编码预览和保存链接正常出现。未运行Hosted CI、未发布/推送/上传，自有代码保持UNLICENSED，等待最终验收；下文旧性能结果仅属历史。
+
+---
+
 # 0.1.2 acceptance candidate / 验收候选
 
 The editor now separates style parameters, fixed canvas positions and the image library. No-photo styles show no image/source tools. Photo styles use original illustrations until a picture is explicitly placed; choosing zero or one picture does not alter the layout. Imported pictures only enter the library. General colour/title, random, sort and weighting controls have been removed; repeatable composition numbers and Reset parameters replace hidden random changes.

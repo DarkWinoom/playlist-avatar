@@ -47,7 +47,7 @@ export function createApp(config: ServerConfig) {
     if (failure.body.error.code === 'INTERNAL_ERROR') console.error(JSON.stringify({ category: 'INTERNAL_ERROR' }));
     return context.json(failure.body, { status: failure.status });
   });
-  app.get('/healthz', context => context.json({ status: 'ok', version: '0.1.2', contractVersion: CONTRACT_VERSION }));
+  app.get('/healthz', context => context.json({ status: 'ok', version: '0.2.0', contractVersion: CONTRACT_VERSION }));
   app.get('/api/v1/capabilities', context => context.json(CapabilitiesSchema.parse({ version: CONTRACT_VERSION,
     limits: { metadata: LIMITS.metadata, candidates: LIMITS.candidates, selected: LIMITS.selected },
     sources: [{ id: 'local', state: 'available' }, { id: 'netease', state: 'available' }, { id: 'qqmusic', state: 'available' },
