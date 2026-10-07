@@ -1,0 +1,5 @@
+import{expect,it}from'vitest';import{storedDataCounts,settingsDataCount,availableScopes}from'./local-data.ts';
+it('counts exactly the draft/history and named records covered by clearing',()=>{expect(storedDataCounts(['draft','recent:one','project:a','project:legacy-trashed'],3,0)).toEqual({draft:2,projects:2,images:3,connections:0});});
+it('does not invent data in empty scopes',()=>{expect(storedDataCounts([],0,0)).toEqual({draft:0,projects:0,images:0,connections:0});expect(settingsDataCount(null,null)).toBe(0);});
+it('counts the stored preference and actual favorites rather than a fixed setting count',()=>{expect(settingsDataCount('{}','["mosaic","duo"]')).toBe(3);expect(settingsDataCount(null,'[]')).toBe(0);expect(settingsDataCount(null,'invalid')).toBe(1);});
+it('removes zero-count selections even when a stale selection remains in state',()=>{const scopes={draft:true,projects:true,images:true,connections:true,settings:false};expect(availableScopes(scopes,{draft:1,projects:0,images:0,connections:0,settings:2})).toEqual({draft:true,projects:false,images:false,connections:false,settings:false});});

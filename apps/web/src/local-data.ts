@@ -1,0 +1,5 @@
+export interface DataCounts{draft:number;projects:number;images:number;connections:number;settings:number}
+export const emptyDataCounts:DataCounts={draft:0,projects:0,images:0,connections:0,settings:0};
+export function storedDataCounts(projectIds:string[],imageCount:number,connectionCount:number):Omit<DataCounts,'settings'>{return{draft:projectIds.filter(id=>id==='draft'||id.startsWith('recent:')).length,projects:projectIds.filter(id=>id!=='draft'&&!id.startsWith('recent:')).length,images:imageCount,connections:connectionCount};}
+export function settingsDataCount(preferences:string|null,favorites:string|null){let count=preferences===null?0:1;if(favorites!==null){try{const value=JSON.parse(favorites);count+=Array.isArray(value)?value.length:1;}catch{count++;}}return count;}
+export function availableScopes(scopes:Record<keyof DataCounts,boolean>,counts:DataCounts){return Object.fromEntries(Object.entries(scopes).map(([key,value])=>[key,value&&counts[key as keyof DataCounts]>0]))as Record<keyof DataCounts,boolean>;}

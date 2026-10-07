@@ -3,6 +3,7 @@ import type { DBSchema } from 'idb';
 import { AssetMetadataSchema, LIMITS, ProjectSchema,projectAssets,SourceSnapshotSchema,sourceNamespace } from '@playlist-avatar/contracts';
 import type { ArtworkAsset, AssetMetadata, Project, StoredProject,SourceSnapshot } from '@playlist-avatar/contracts';
 import{collectionIdentity,mergeCollection}from'./collections.ts';import type{ImageCollection}from'./collections.ts';
+import{storedDataCounts}from'./local-data.ts';
 
 export interface LibraryRecord extends StoredProject { state: 'active' | 'trashed'; trashedAt?: string;position?:number }
 interface AssetData { id: string; blob: Blob; thumbnail: Blob }
@@ -133,11 +134,12 @@ export function createRepository(name = 'playlist-avatar.v1') {
     await save({...value.project,id:`recent:${crypto.randomUUID()}`,updatedAt:new Date().toISOString()},value.assets,undefined,LIMITS.projectBytes,undefined,true);
     const tx=db.transaction('projects','readwrite'),history=(await tx.store.getAll()).filter(row=>row.id.startsWith('recent:')).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));for(const row of history.slice(6))await tx.store.delete(row.id);await tx.done;
   }
-  return {save,get,list,state,rename,removeProject,clear,database,saveImages,listImages,getImages,removeImage,collections,imagePage,reorder,preserveDraft};
+  async function dataCounts(){const db=await database,tx=db.transaction(['projects','imageLibrary','connections']),result=storedDataCounts(await tx.objectStore('projects').getAllKeys(),await tx.objectStore('imageLibrary').count(),await tx.objectStore('connections').count());await tx.done;return result;}
+  return {save,get,list,state,rename,removeProject,clear,database,saveImages,listImages,getImages,removeImage,collections,imagePage,reorder,preserveDraft,dataCounts};
 }
 let singleton: ReturnType<typeof createRepository> | undefined;
 export function repository() { return singleton ??= createRepository(); }
 export function storageMessage(error:unknown,chinese:boolean) {const full=error instanceof Error && ['QuotaExceededError','STORAGE_FULL'].includes(error.name==='QuotaExceededError'?error.name:error.message);
   if(error instanceof Error&&error.message==='PROJECT_DELETED')return chinese?'这张作品已删除。再次保存会创建新作品。':'This cover was deleted. Save again to create a new cover.';
   if(error instanceof Error&&error.message==='STORAGE_UPGRADE_BLOCKED')return chinese?'请关闭同一地址的旧版本标签页，再刷新。原作品会保留。':'Close older tabs at this address, then reload. Your covers are kept.';
-  return full?(chinese?'存储空间不足，请先备份作品':'Storage is full. Back up your artwork first.'):(chinese?'保存失败，作品仍在当前页面':'Save failed. Your artwork remains on this page.');}
+  return full?(chinese?'存储空间不足，请导出需要的图片，再管理本地数据。':'Storage is full. Export images you need, then manage local data.'):(chinese?'保存失败，作品仍在当前页面':'Save failed. Your artwork remains on this page.');}

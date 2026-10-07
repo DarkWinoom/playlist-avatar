@@ -37,26 +37,26 @@ Then open [http://127.0.0.1:18080](http://127.0.0.1:18080). On Windows you can c
 
 ## Make your first cover
 
-1. On the home page, choose **New cover** or an inspiration template. The home page becomes your own collection as you save covers.
+1. On the home page, choose **New cover** or an inspiration template. Saved covers have a separate collection with an internally scrolling card area. The introductory home page has an inspiration strip that cycles through all24 templates a screen at a time, loading small previews only for the current and neighboring groups; the sleeve beside the record fades through eight original covers about every five seconds.
 2. Keep the template picker open on the left. **No images** templates need only their effects; **With images** templates begin with original illustrations in fixed positions.
 3. For photo templates, use **Import playlist** or **Upload images** in the lower panel. Read a public share link and choose **Keep these covers**. Before adding any pictures, the whole image panel offers centered Import playlist and Upload images buttons. Images are grouped automatically under Recent, Playlists, Uploads and Covers; choose a source once to see its searchable, paginated grid. Importing leaves the current artwork intact.
 4. Drag a picture onto a canvas position, or click one picture and then one position. A placement clears that selection. Use the same picture in several positions if you want; **On canvas** marks pictures currently used. A changed position's restore button returns to its original image when editing, or its illustration when creating a new cover.
-5. Use the few effect sliders on the right. **Random effect** changes these visible parameters and records the result; Undo/redo and Ctrl/Cmd+Z can retrieve it. **Reset** restores style defaults while retaining placements. The Type template has its own lettering field. Switching templates retains your work in each template.
-6. Choose **Finish cover**. Give it a name for the collection, or **Export** PNG/JPG/WebP at 512, 1024 or 2048px. Export can crop a circle; PNG/WebP support transparency and JPG uses a solid background. **Save image file** is available if the first download does not start.
+5. Use the few effect sliders on the right. **Random effect** changes these visible parameters and records the result; Undo/redo and Ctrl/Cmd+Z can retrieve it. **Reset** restores style defaults while retaining placements. The Type template has its own lettering field. Switching templates retains your work in each template and moves the entire paper card along a gentle curve, with a fade.
+6. Choose **Finish cover**. **Export image** is also available in each saved cover's menu. The export dialog updates an encoded preview when you change size, format, background or circular crop; Download saves that exact preview. Give it a name for the collection, or **Export** PNG/JPG/WebP at 512, 1024 or 2048px. Export can crop a circle; PNG/WebP support transparency and JPG uses a solid background. **Save image file** is available if the first download does not start.
 
 Templates, effects and images scroll within their own areas while the canvas and Finish control stay available. Preferences provides English/Chinese, light/dark themes and reduced motion. The home record slowly rotates, while cover hover, cropped photo placement and short transitions are part of the listening-room style; there is no audio playback or audio analysis.
 
 ## Save and manage covers
 
-**Save to my collection** stores the recipe and actual image data in this browser. Open a saved cover to edit it; the next save updates that cover. Its menu provides **Use as a template**, Rename, Move earlier/later, Back up package and Delete. Using a cover as a template creates a new draft without overwriting the original. You can also drag cards to reorder them. Deletion requires confirmation and permanently removes the cover. The dialog warns that this cannot be undone; pictures already in the image library remain available. Back up a cover before deleting it.
+**Save to my collection** stores the recipe and real image Blobs in this browser. Opening and saving a cover updates it. The header ticket switches between My works and Back home. The collection lists covers directly without a secondary heading or search, places matching New cover and Resume your draft buttons together and keeps its header/footer fixed while its cards scroll. A cover's menu offers editing, creating from a template, renaming, Export image and deletion. Movement commands appear when there is more than one cover; unavailable directions are disabled. You can also drag cards to reorder them.
 
-Drafts save automatically when browser storage is available; **Resume your draft** reopens the current session. Recent sources preserve earlier creation images automatically, without requiring you to manage folders or tags. Saving and ZIP backup retain placed pictures, per-template variants and image restoration baselines, up to 50 unique pictures per workspace. Unselected pictures from a source are kept in the library rather than added to every work or ZIP.
+Export image reads the selected saved work without replacing your current draft. Its preview is the actual encoded PNG/JPG/WebP at the selected size; transparent/circular/background/quality settings update it automatically. Download uses that same image. Project-package ZIP import and backup have been removed; playlist import and image upload remain.
 
-The library belongs to the **browser profile and website origin** (protocol, hostname and port). Another browser, device, port, `localhost` spelling or HTTP/HTTPS address has a separate library. The app is not an installed offline PWA; a fresh page still requires the application server. Saved works use their stored image Blobs rather than requiring the music service to remain available.
+Automatic drafts and Recent images remain. Each work preserves its template variants, image placements and restoration baselines, with at most50 unique pictures in one workspace. Unselected source pictures remain in the image library. Existing saved recipes and template IDs retain their appearance until explicitly edited or reset.
 
-Choose **Back up package** from a cover's menu to download a ZIP. **Import package** on the collection restores it as a new cover. Back up before clearing site data, moving addresses, changing browsers or updating. Packages exclude connection credentials and the unrelated image library. Existing recipes and template IDs retain their stored appearance until an explicit edit/reset. See [backup, updates and rollback](docs/maintenance.md).
+The library belongs to the browser profile and exact website origin, including protocol, host and port. Keep the same origin/profile when updating. Export finished images you need before clearing local data; those images can later be uploaded as materials. There is no editable-work transfer between browsers in this version. See [updates and local data](docs/maintenance.md).
 
-**Preferences → Manage local data** offers separate scopes. Clearing All covers permanently removes stored covers after confirmation. Clearing the image library preserves image data still referenced by saved works. Failed saves or storage quota errors do not automatically delete works.
+**Preferences → Manage local data** displays counts. Empty scopes cannot be selected, and confirmation is disabled without a valid selection. Deletion and clearing require confirmation and cannot be undone; image-library materials remain when deleting a work. Storage/quota failures do not silently delete works.
 
 ## Stop, restart and check
 
@@ -74,6 +74,8 @@ docker compose logs --tail 30
 ## Local images and NAS
 
 The release candidate is available as locally built images; **no public registry URL has been published**. You can build from source with the command above, or load a supplied matching image archive:
+
+Version0.2.4 is a local working-tree/runtime update without new release archives. The retained0.2.1 image below has the older interface; select `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.2.1-local` in `.env` when loading it. Build the current source for the new interface.
 
 ```sh
 docker load -i playlist-avatar-0.2.1-amd64.tar.gz
@@ -102,7 +104,7 @@ The default container has a 256MiB memory limit and one-CPU quota. Imports have 
 | Page/API reports forbidden | Use the exact configured origin; check the reverse proxy Host. |
 | Public playlist cannot be read | Verify it is public; retry later, use another link or local images. Login is not required as a fallback. |
 | A cover is missing / skipped | Select another ready candidate or a local image; preserve the existing work. |
-| Saving failed | Export a backup, check storage permissions/free space and review the explicit scopes in Manage local data. |
+| Saving failed | Export needed finished images, check storage permissions/free space and review the scopes in Manage local data. |
 | Browser cannot encode JPG/WebP | Choose PNG. The app checks real encoding instead of changing a file suffix. |
 | Remembered advanced connection expired | Reconnect to the configured profile; server restarts invalidate temporary sessions. |
 

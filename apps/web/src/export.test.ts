@@ -1,0 +1,13 @@
+import{afterEach,beforeEach,expect,it,vi}from'vitest';import type{Recipe,ArtworkAsset,ExportOptions}from'@playlist-avatar/contracts';import{freshRecipe}from'./editor-store.ts';
+const workers=vi.hoisted(()=>({list:[]as{onmessage:(event:{data:{blob?:Blob;error?:string}})=>void;onerror:()=>void;terminated:boolean;request?:{recipe:Recipe;assets:ArtworkAsset[];options:ExportOptions}}[]}));
+vi.mock('./export.worker.ts?worker',()=>({default:class{onmessage=()=>{};onerror=()=>{};terminated=false;request?:{recipe:Recipe;assets:ArtworkAsset[];options:ExportOptions};constructor(){workers.list.push(this);}postMessage(value:{recipe:Recipe;assets:ArtworkAsset[];options:ExportOptions}){this.request=value;}terminate(){this.terminated=true;}}}));
+import{exportArtwork}from'./export.ts';
+const options:ExportOptions={format:'image/png',size:512,transparent:false,circle:false,background:'#ffffff',quality:1};
+beforeEach(()=>{workers.list=[];vi.stubGlobal('Worker',class{});vi.stubGlobal('OffscreenCanvas',class{});});afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();});
+it('cancels an obsolete preview and ignores its late reply while the replacement remains valid',async()=>{
+ const controller=new AbortController(),old=exportArtwork(freshRecipe(),{},options,controller.signal),rejected=expect(old).rejects.toThrow('CANCELLED');controller.abort();await rejected;expect(workers.list[0]?.terminated).toBe(true);
+ const latest=exportArtwork(freshRecipe(),{},{...options,format:'image/webp'}),blob=new Blob(['new'],{type:'image/webp'});workers.list[0]!.onmessage({data:{blob:new Blob(['old'])}});workers.list[1]!.onmessage({data:{blob}});expect(await latest).toBe(blob);expect(workers.list[1]?.terminated).toBe(true);
+});
+it('rejects a preview cancelled before it starts without creating a worker',async()=>{const controller=new AbortController();controller.abort();await expect(exportArtwork(freshRecipe(),{},options,controller.signal)).rejects.toThrow('CANCELLED');expect(workers.list).toHaveLength(0);});
+it('bounds a nonresponsive export and frees its worker',async()=>{vi.useFakeTimers();const pending=exportArtwork(freshRecipe(),{},options),rejected=expect(pending).rejects.toThrow('UPSTREAM_TIMEOUT');await vi.advanceTimersByTimeAsync(20000);await rejected;expect(workers.list[0]?.terminated).toBe(true);});
+it('freezes rendering options and terminates on an encoder error',async()=>{const settings={...options},pending=exportArtwork(freshRecipe(),{},settings),rejected=expect(pending).rejects.toThrow('UNSUPPORTED_FORMAT');settings.size=2048;expect(workers.list[0]?.request?.options.size).toBe(512);workers.list[0]!.onmessage({data:{error:'UNSUPPORTED_FORMAT'}});await rejected;expect(workers.list[0]?.terminated).toBe(true);});

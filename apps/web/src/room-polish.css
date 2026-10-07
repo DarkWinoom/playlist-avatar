@@ -1,5 +1,5 @@
 .room-work-grid{grid-template-columns:repeat(auto-fill,minmax(156px,208px));gap:26px 20px;justify-content:space-between}
-.room-work-meta h3{font-size:14px}.room-work-meta>div>span,.room-example-tag{font-size:11px}.room-card-open{font-size:12px}
+.room-work-meta h3{font-size:14px}.room-work-meta>div>span{font-size:11px}.room-card-open{font-size:12px}
 .room-hero h1{margin-bottom:32px}.room-footer{padding:20px 0 26px}
 .room-header-end>.icon-button{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;min-height:44px;padding:0;margin:0}
 .room-header-end>.icon-button>svg{display:block;width:19px;height:19px;flex:none}

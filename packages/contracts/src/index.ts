@@ -15,8 +15,7 @@ export const LIMITS = Object.freeze({ shareBytes: 2048, requestBytes: 32768, ups
   metadata: 2000, candidates: 50, selected: 16, resolves: 2, queue: 8, images: 4,
   requestMs: 10000, deadlineMs: 30000, redirects: 3, remoteImageBytes: 8388608, remotePixels: 16000000,
   localImageBytes: 20971520, localPixels: 24000000, history: 50, bitmapBytes: 67108864,
-  candidateBytes: 67108864, projectBytes: 524288000, packageBytes: 201326592,
-  expandedPackageBytes: 268435456, packageEntries: 128, manifestBytes: 1048576 });
+  candidateBytes: 67108864, projectBytes: 524288000, manifestBytes: 1048576 });
 
 export const SourceSchema = z.enum(SOURCE_IDS);
 export const TemplateSchema = z.enum(TEMPLATE_IDS);
@@ -115,8 +114,6 @@ export const ProjectSchema = z.object({ version: z.literal(1), id: key, name: z.
 export type Project = z.infer<typeof ProjectSchema>;
 export function projectAssets(project:Project){return workspaceAssets(project.recipe,project.workspace);}
 export interface StoredProject extends Project { thumbnail?: Blob }
-export const PackageManifestSchema=z.object({format:z.literal('playlist-avatar'),version:z.union([z.literal(0),z.literal(1)]),project:z.unknown(),
-  assets:z.array(AssetMetadataSchema.extend({image:z.string(),thumbnail:z.string()}).strict()).max(LIMITS.candidates)}).strict();
 
 export const ConnectionProfileSchema = z.object({ id: key, kind: z.enum(['subsonic', 'jellyfin', 'netease-api', 'qq-api']),
   name: z.string().min(1).max(120), implementation: z.string().max(128), address: z.string().max(2048).refine(value => {
