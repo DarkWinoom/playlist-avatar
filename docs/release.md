@@ -1,3 +1,19 @@
+# 0.2.1 feedback update / 验收反馈修订
+
+The collection shows more cards per row without enlarging old thumbnails. Home copy is shorter, the gear is centered and the record slowly rotates, respecting reduced motion. Studio text and Finish are larger; before any user images exist, the entire material panel offers centered Import playlist / Upload images actions. Automatic draft saving continues without a header status label.
+
+作品墙增加每行数量，旧预览不再放大；首页文案精简、齿轮居中、唱片缓慢循环转动并尊重减少动效。制作台字体与成品按钮放大；尚无素材时，整个素材区域提供居中导入/上传引导，后台继续自动保存但不显示右上角提示。
+
+Deleting a cover now permanently removes it after an explicit confirmation; there is no Deleted page. Library pictures and other works remain. Draft/history identity is detached, and persistent deletion markers reject stale saves from other tabs under the deleted ID. Database version4 preserves recipes/Blobs and adds these markers; if an old tab blocks the upgrade, close it and reload. Previous hidden Trash records are not automatically purged by this update. Back up needed works before confirming deletion.
+
+删除作品改为明确二次确认后直接移除，无法恢复，没有已删除页面。图库及其它作品保留，草稿/历史解绑原作品身份，持久删除标记阻止其它标签页旧缓存用原ID复活作品；数据库v4只新增标记并保留配方/Blob，升级被旧标签阻止时需关闭旧标签后刷新，继续创作会成为新作品；本次更新不会批量清除旧版本隐藏的回收站记录。重要作品请在确认删除前备份。
+
+Validation: eight new transaction-model /identity tests, full types/tests/build and runtime notices. Actual browser checks cover five-column thumbnail sizing, symmetric gear spacing, rotating/reduced-motion states, empty→upload transition, import dialog, deletion confirmation/cancel, no-image mode, light/dark and320/375px layout. User records were not permanently deleted during UI verification. Local amd64 runtime and versioned artifacts are checked after packaging; advanced real instances, native ARM and physical/other-browser coverage remain unverified.
+
+验证包含8项新增事务模型/身份测试及全量类型/单测/构建/运行许可；真实界面检查五列图像比例、齿轮留白、循环/减少动效、空态→上传、导入弹窗、删除确认/取消、无图模式、双主题与320/375布局。UI验证未永久删除用户记录；amd64本地运行与归档在打包后检查。真实高级实例、原生ARM、真机和其它浏览器仍未验证。
+
+---
+
 # 0.2.0 listening-room candidate / 听音室验收候选
 
 The listening room replaces the previous editor: a cover collection, light/dark themes and one continuous studio. Templates remain on the left, the canvas in the middle, effects on the right, and an automatically grouped image grid below photo templates. No-image templates skip image tools. Random effect records only visible parameters; Undo/reset and per-template state make results recoverable.

@@ -1,6 +1,6 @@
 services:
   playlist-avatar:
-    image: "${PLAYLIST_AVATAR_IMAGE:-playlist-avatar:0.2.0-local}"
+    image: "${PLAYLIST_AVATAR_IMAGE:-playlist-avatar:0.2.1-local}"
     build: .
     init: true
     ports:

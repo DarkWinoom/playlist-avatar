@@ -14,10 +14,12 @@ interface AvatarDatabase extends DBSchema {
   connections: { key: string; value: { id: string; profileId: string; name: string; username: string; token: string; expiresAt: string } };
   imageLibrary:{key:string;value:{id:string;addedAt:string;snapshot?:SourceSnapshot};indexes:{added:string}};
   imageSources:{key:string;value:ImageCollection};
+  deletedProjects:{key:string;value:{id:string;deletedAt:string}};
 }
 export interface LibraryImage extends AssetMetadata{thumbnail:Blob;snapshot?:SourceSnapshot}
 export function createRepository(name = 'playlist-avatar.v1') {
-  const database = openDB<AvatarDatabase>(name, 3, { upgrade(db,oldVersion,_newVersion,transaction) {
+  let rejectBlocked!:(error:Error)=>void;const blocked=new Promise<never>((_resolve,reject)=>{rejectBlocked=reject;});
+  const opening = openDB<AvatarDatabase>(name, 4, {blocked(){rejectBlocked(Error('STORAGE_UPGRADE_BLOCKED'));},blocking(){void opening.then(db=>db.close());},upgrade(db,oldVersion,_newVersion,transaction) {
     if(oldVersion<1){
     const projects = db.createObjectStore('projects', { keyPath: 'id' }); projects.createIndex('updated', 'updatedAt');
     db.createObjectStore('metadata', { keyPath: 'id' }); db.createObjectStore('materials', { keyPath: 'id' }); db.createObjectStore('connections', { keyPath: 'id' });
@@ -31,14 +33,17 @@ export function createRepository(name = 'playlist-avatar.v1') {
         const value=snapshot.success?snapshot.data:undefined,id=collectionIdentity(value);groups.set(id,mergeCollection(groups.get(id),[row.id],value,row.addedAt));}
       for(const group of groups.values())await transaction.objectStore('imageSources').put(group);
     })();}
+    if(oldVersion<4)db.createObjectStore('deletedProjects',{keyPath:'id'});
   } });
+  const database=Promise.race([opening,blocked]);
   const references=(record:unknown)=>{const parsed=ProjectSchema.safeParse(record);return parsed.success?projectAssets(parsed.data):undefined;};
   const recordSize=(record:LibraryRecord)=>{try{return new TextEncoder().encode(JSON.stringify({...record,thumbnail:undefined})).length+(record.thumbnail instanceof Blob?record.thumbnail.size:0);}catch{return LIMITS.manifestBytes;}};
   async function save(project: Project, assets: ArtworkAsset[], thumbnail?: Blob, limit = LIMITS.projectBytes,signal?:AbortSignal,linkImages=false) {
     const parsed = ProjectSchema.parse(project), needed = projectAssets(parsed), incoming = new Map(assets.map(a => [a.id,a]));
-    const db = await database, tx = db.transaction(['projects','metadata','materials','imageLibrary','imageSources'],'readwrite');
+    const db = await database, tx = db.transaction(['projects','metadata','materials','imageLibrary','imageSources','deletedProjects'],'readwrite');
     const cancel=()=>{try{tx.abort();}catch{}};if(signal?.aborted){cancel();await tx.done.catch(()=>{});throw new Error('CANCELLED');}signal?.addEventListener('abort',cancel,{once:true});
     try {
+      if(await tx.objectStore('deletedProjects').get(parsed.id))throw Error('PROJECT_DELETED');
       const metadata = await tx.objectStore('metadata').getAll(), records = await tx.objectStore('projects').getAll();
       if(records.some(p=>p.id===parsed.id&&!references(p)))throw new Error('INVALID_PACKAGE');
       const other=records.filter(p=>p.id!==parsed.id),unknown=other.some(p=>!references(p));
@@ -55,7 +60,7 @@ export function createRepository(name = 'playlist-avatar.v1') {
       if (needed.some(id => !existing.has(id) && !incoming.has(id))) throw new Error('INVALID_PACKAGE');
       const fresh = needed.filter(id=>!existing.has(id)).map(id=>incoming.get(id)!);
       const previous=records.find(p=>p.id===parsed.id),finalThumbnail=thumbnail||previous?.thumbnail;
-      const recordBytes=other.reduce((sum,p)=>sum+recordSize(p),0)+new TextEncoder().encode(JSON.stringify(library)).length+new TextEncoder().encode(JSON.stringify([...groups.values()])).length;
+      const recordBytes=other.reduce((sum,p)=>sum+recordSize(p),0)+new TextEncoder().encode(JSON.stringify(library)).length+new TextEncoder().encode(JSON.stringify([...groups.values()])).length+new TextEncoder().encode(JSON.stringify(await tx.objectStore('deletedProjects').getAll())).length;
       const nextRecord:LibraryRecord={...parsed,thumbnail:finalThumbnail,state:'active',position:previous?.position};
       const bytes = kept.reduce((sum,a)=>sum+a.bytes+a.thumbnailBytes+new TextEncoder().encode(JSON.stringify(a)).length,0)+fresh.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size+new TextEncoder().encode(JSON.stringify({...AssetMetadataSchema.parse(a),thumbnailBytes:a.thumbnail.size})).length,0)+recordBytes+recordSize(nextRecord);
       if (bytes > limit) throw new Error('STORAGE_FULL');
@@ -81,9 +86,19 @@ export function createRepository(name = 'playlist-avatar.v1') {
   async function state(id:string,value:'active'|'trashed') {const db=await database,tx=db.transaction('projects','readwrite'),record=await tx.store.get(id);if(!record)return;
     await tx.store.put({...record,state:value,trashedAt:value==='trashed'?new Date().toISOString():undefined});await tx.done;}
   async function rename(id:string,name:string){const db=await database,tx=db.transaction('projects','readwrite'),record=await tx.store.get(id);if(!record)return;const project=ProjectSchema.parse({...record,name,updatedAt:new Date().toISOString()});await tx.store.put({...record,...project});await tx.done;}
+  async function removeProject(id:string){
+    if(id==='draft'||id.startsWith('recent:'))throw Error('INVALID_PACKAGE');
+    const db=await database,tx=db.transaction(['projects','metadata','materials','imageLibrary','deletedProjects'],'readwrite');
+    try{if(!await tx.objectStore('projects').get(id)){await tx.done;return;}await tx.objectStore('deletedProjects').put({id,deletedAt:new Date().toISOString()});await tx.objectStore('projects').delete(id);
+      for(const record of await tx.objectStore('projects').getAll())if(record.workspace?.editingId===id){const{editingId:_,...workspace}=record.workspace;await tx.objectStore('projects').put({...record,workspace});}
+      const records=await tx.objectStore('projects').getAll(),library=await tx.objectStore('imageLibrary').getAllKeys(),retained=new Set([...records.flatMap(record=>references(record)||[]),...library]);
+      if(!records.some(record=>!references(record)))for(const key of await tx.objectStore('metadata').getAllKeys())if(!retained.has(key)){await tx.objectStore('metadata').delete(key);await tx.objectStore('materials').delete(key);}
+      await tx.done;
+    }catch(error){try{tx.abort();}catch{}await tx.done.catch(()=>{});throw error;}
+  }
   async function clear(scopes:{draft:boolean;projects:boolean;connections:boolean;images?:boolean}) {
-    const db=await database,tx=db.transaction(['projects','metadata','materials','connections','imageLibrary','imageSources'],'readwrite');
-    if(scopes.projects)for(const key of await tx.objectStore('projects').getAllKeys())if(key!=='draft'&&!key.startsWith('recent:'))await tx.objectStore('projects').delete(key);
+    const db=await database,tx=db.transaction(['projects','metadata','materials','connections','imageLibrary','imageSources','deletedProjects'],'readwrite');
+    if(scopes.projects)for(const key of await tx.objectStore('projects').getAllKeys())if(key!=='draft'&&!key.startsWith('recent:')){await tx.objectStore('deletedProjects').put({id:key,deletedAt:new Date().toISOString()});await tx.objectStore('projects').delete(key);}
     if(scopes.draft)for(const key of await tx.objectStore('projects').getAllKeys())if(key==='draft'||key.startsWith('recent:'))await tx.objectStore('projects').delete(key);
     if(scopes.connections)await tx.objectStore('connections').clear();
     if(scopes.images){await tx.objectStore('imageLibrary').clear();await tx.objectStore('imageSources').clear();}
@@ -93,13 +108,13 @@ export function createRepository(name = 'playlist-avatar.v1') {
   async function saveImages(assets:ArtworkAsset[],snapshot?:SourceSnapshot,signal?:AbortSignal){
     if(assets.length>LIMITS.candidates||assets.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size,0)>LIMITS.candidateBytes)throw Error('RESPONSE_TOO_LARGE');
     if(snapshot)snapshot=SourceSnapshotSchema.parse(snapshot);
-    const db=await database,tx=db.transaction(['projects','metadata','materials','imageLibrary','imageSources'],'readwrite'),cancel=()=>{try{tx.abort();}catch{}};signal?.addEventListener('abort',cancel,{once:true});
+    const db=await database,tx=db.transaction(['projects','metadata','materials','imageLibrary','imageSources','deletedProjects'],'readwrite'),cancel=()=>{try{tx.abort();}catch{}};signal?.addEventListener('abort',cancel,{once:true});
     try{if(signal?.aborted)throw Error('CANCELLED');const metadata=await tx.objectStore('metadata').getAll(),records=await tx.objectStore('projects').getAll(),library=await tx.objectStore('imageLibrary').getAll(),existing=new Map(metadata.map(a=>[a.id,a]));
       const fresh=[...new Map(assets.filter(a=>!existing.has(a.id)).map(a=>[a.id,a])).values()];
       if(new Set([...library.map(a=>a.id),...assets.map(a=>a.id)]).size>1000)throw Error('STORAGE_FULL');
       const groups=await tx.objectStore('imageSources').getAll(),group=mergeCollection(groups.find(row=>row.id===collectionIdentity(snapshot)),assets.map(a=>a.id),snapshot);if(groups.filter(row=>row.id!==group.id).length>=1000)throw Error('STORAGE_FULL');
       const finalLibrary=[...new Map([...library,...assets.map(asset=>({id:asset.id,addedAt:group.updatedAt,snapshot}))].map(row=>[row.id,row])).values()];
-      const bytes=metadata.reduce((sum,a)=>sum+a.bytes+a.thumbnailBytes+new TextEncoder().encode(JSON.stringify(a)).length,0)+records.reduce((sum,p)=>sum+recordSize(p),0)+new TextEncoder().encode(JSON.stringify(finalLibrary)).length+new TextEncoder().encode(JSON.stringify([...groups.filter(row=>row.id!==group.id),group])).length+fresh.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size+new TextEncoder().encode(JSON.stringify({...AssetMetadataSchema.parse(a),thumbnailBytes:a.thumbnail.size})).length,0);
+      const bytes=metadata.reduce((sum,a)=>sum+a.bytes+a.thumbnailBytes+new TextEncoder().encode(JSON.stringify(a)).length,0)+records.reduce((sum,p)=>sum+recordSize(p),0)+new TextEncoder().encode(JSON.stringify(finalLibrary)).length+new TextEncoder().encode(JSON.stringify([...groups.filter(row=>row.id!==group.id),group])).length+new TextEncoder().encode(JSON.stringify(await tx.objectStore('deletedProjects').getAll())).length+fresh.reduce((sum,a)=>sum+a.bytes+a.thumbnail.size+new TextEncoder().encode(JSON.stringify({...AssetMetadataSchema.parse(a),thumbnailBytes:a.thumbnail.size})).length,0);
       if(bytes>LIMITS.projectBytes)throw Error('STORAGE_FULL');
       for(const asset of assets){const parsed=AssetMetadataSchema.parse(asset),old=existing.get(asset.id);if(asset.bytes!==asset.blob.size||old&&(old.fingerprint!==asset.fingerprint||old.bytes!==asset.bytes))throw Error('INVALID_PACKAGE');if(!old){await tx.objectStore('metadata').put({...parsed,thumbnailBytes:asset.thumbnail.size});await tx.objectStore('materials').put({id:asset.id,blob:asset.blob,thumbnail:asset.thumbnail});}await tx.objectStore('imageLibrary').put(finalLibrary.find(row=>row.id===asset.id)!);}
       if(group.ids.length)await tx.objectStore('imageSources').put(group);await tx.done;
@@ -118,9 +133,11 @@ export function createRepository(name = 'playlist-avatar.v1') {
     await save({...value.project,id:`recent:${crypto.randomUUID()}`,updatedAt:new Date().toISOString()},value.assets,undefined,LIMITS.projectBytes,undefined,true);
     const tx=db.transaction('projects','readwrite'),history=(await tx.store.getAll()).filter(row=>row.id.startsWith('recent:')).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));for(const row of history.slice(6))await tx.store.delete(row.id);await tx.done;
   }
-  return {save,get,list,state,rename,clear,database,saveImages,listImages,getImages,removeImage,collections,imagePage,reorder,preserveDraft};
+  return {save,get,list,state,rename,removeProject,clear,database,saveImages,listImages,getImages,removeImage,collections,imagePage,reorder,preserveDraft};
 }
 let singleton: ReturnType<typeof createRepository> | undefined;
 export function repository() { return singleton ??= createRepository(); }
 export function storageMessage(error:unknown,chinese:boolean) {const full=error instanceof Error && ['QuotaExceededError','STORAGE_FULL'].includes(error.name==='QuotaExceededError'?error.name:error.message);
+  if(error instanceof Error&&error.message==='PROJECT_DELETED')return chinese?'这张作品已删除。再次保存会创建新作品。':'This cover was deleted. Save again to create a new cover.';
+  if(error instanceof Error&&error.message==='STORAGE_UPGRADE_BLOCKED')return chinese?'请关闭同一地址的旧版本标签页，再刷新。原作品会保留。':'Close older tabs at this address, then reload. Your covers are kept.';
   return full?(chinese?'存储空间不足，请先备份作品':'Storage is full. Back up your artwork first.'):(chinese?'保存失败，作品仍在当前页面':'Save failed. Your artwork remains on this page.');}

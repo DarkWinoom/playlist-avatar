@@ -33,7 +33,7 @@ interface EditorState {
   select: (id: string) => void; reorder: (index: number, direction: number) => void; template: (id: TemplateId) => void;
   move:(id:string,target:string)=>void;place:(id:string,target:string)=>void;frame:(id:string,value:NonNullable<Recipe['imageFrames']>[string])=>void;
   choose:(assets:ArtworkAsset[])=>void;assign:(id:string,slot:string)=>void;reset:()=>void;
-  accept:(assets:ArtworkAsset[])=>void;restoreSlot:(slot:string)=>void;identify:(id:string)=>void;
+  accept:(assets:ArtworkAsset[])=>void;restoreSlot:(slot:string)=>void;identify:(id?:string)=>void;
 }
 function distinct(a: unknown, b: unknown) { return JSON.stringify(a) !== JSON.stringify(b); }
 export const useEditor = create<EditorState>((set, get) => ({

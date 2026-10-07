@@ -39,16 +39,16 @@ Then open [http://127.0.0.1:18080](http://127.0.0.1:18080). On Windows you can c
 
 1. On the home page, choose **New cover** or an inspiration template. The home page becomes your own collection as you save covers.
 2. Keep the template picker open on the left. **No images** templates need only their effects; **With images** templates begin with original illustrations in fixed positions.
-3. For photo templates, use **Import playlist** or **Upload images** in the lower panel. Read a public share link and choose **Keep these covers**. Images are grouped automatically under Recent, Playlists, Uploads and Covers; choose a source once to see its searchable, paginated grid. Importing leaves the current artwork intact.
+3. For photo templates, use **Import playlist** or **Upload images** in the lower panel. Read a public share link and choose **Keep these covers**. Before adding any pictures, the whole image panel offers centered Import playlist and Upload images buttons. Images are grouped automatically under Recent, Playlists, Uploads and Covers; choose a source once to see its searchable, paginated grid. Importing leaves the current artwork intact.
 4. Drag a picture onto a canvas position, or click one picture and then one position. A placement clears that selection. Use the same picture in several positions if you want; **On canvas** marks pictures currently used. A changed position's restore button returns to its original image when editing, or its illustration when creating a new cover.
 5. Use the few effect sliders on the right. **Random effect** changes these visible parameters and records the result; Undo/redo and Ctrl/Cmd+Z can retrieve it. **Reset** restores style defaults while retaining placements. The Type template has its own lettering field. Switching templates retains your work in each template.
 6. Choose **Finish cover**. Give it a name for the collection, or **Export** PNG/JPG/WebP at 512, 1024 or 2048px. Export can crop a circle; PNG/WebP support transparency and JPG uses a solid background. **Save image file** is available if the first download does not start.
 
-Templates, effects and images scroll within their own areas while the canvas and Finish control stay available. Preferences provides English/Chinese, light/dark themes and reduced motion. Cover hover, cropped photo placement and short transitions are part of the listening-room style; there is no audio playback or audio analysis.
+Templates, effects and images scroll within their own areas while the canvas and Finish control stay available. Preferences provides English/Chinese, light/dark themes and reduced motion. The home record slowly rotates, while cover hover, cropped photo placement and short transitions are part of the listening-room style; there is no audio playback or audio analysis.
 
 ## Save and manage covers
 
-**Save to my collection** stores the recipe and actual image data in this browser. Open a saved cover to edit it; the next save updates that cover. Its menu provides **Use as a template**, Rename, Move earlier/later, Back up package and Delete. Using a cover as a template creates a new draft without overwriting the original. You can also drag cards to reorder them. Deletion requires confirmation and moves a cover to **Deleted covers**, where it can be restored.
+**Save to my collection** stores the recipe and actual image data in this browser. Open a saved cover to edit it; the next save updates that cover. Its menu provides **Use as a template**, Rename, Move earlier/later, Back up package and Delete. Using a cover as a template creates a new draft without overwriting the original. You can also drag cards to reorder them. Deletion requires confirmation and permanently removes the cover. The dialog warns that this cannot be undone; pictures already in the image library remain available. Back up a cover before deleting it.
 
 Drafts save automatically when browser storage is available; **Resume your draft** reopens the current session. Recent sources preserve earlier creation images automatically, without requiring you to manage folders or tags. Saving and ZIP backup retain placed pictures, per-template variants and image restoration baselines, up to 50 unique pictures per workspace. Unselected pictures from a source are kept in the library rather than added to every work or ZIP.
 
@@ -56,7 +56,7 @@ The library belongs to the **browser profile and website origin** (protocol, hos
 
 Choose **Back up package** from a cover's menu to download a ZIP. **Import package** on the collection restores it as a new cover. Back up before clearing site data, moving addresses, changing browsers or updating. Packages exclude connection credentials and the unrelated image library. Existing recipes and template IDs retain their stored appearance until an explicit edit/reset. See [backup, updates and rollback](docs/maintenance.md).
 
-**Preferences → Manage local data** offers separate scopes. Clearing Works (including deleted) permanently removes all named covers and their Trash after confirmation; it is not a Trash-only action. Clearing the image library preserves image data still referenced by saved works. Failed saves or storage quota errors do not automatically delete works.
+**Preferences → Manage local data** offers separate scopes. Clearing All covers permanently removes stored covers after confirmation. Clearing the image library preserves image data still referenced by saved works. Failed saves or storage quota errors do not automatically delete works.
 
 ## Stop, restart and check
 
@@ -76,11 +76,11 @@ docker compose logs --tail 30
 The release candidate is available as locally built images; **no public registry URL has been published**. You can build from source with the command above, or load a supplied matching image archive:
 
 ```sh
-docker load -i playlist-avatar-0.2.0-amd64.tar.gz
+docker load -i playlist-avatar-0.2.1-amd64.tar.gz
 docker compose up -d --no-build
 ```
 
-The 0.2.0 ARM archive is built, but its runtime has not been validated in this update because this host cannot execute ARM emulation. For a native 64-bit ARM host, load `playlist-avatar-0.2.0-arm64.tar.gz`, set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.2.0-arm64` in `.env`, and use the same `up -d --no-build` command. The image tags are local names, not downloadable registry addresses. See [release status and tested architectures](docs/release.md).
+The 0.2.1 ARM archive is built, but its runtime has not been validated in this update because this host cannot execute ARM emulation. For a native 64-bit ARM host, load `playlist-avatar-0.2.1-arm64.tar.gz`, set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:0.2.1-arm64` in `.env`, and use the same `up -d --no-build` command. The image tags are local names, not downloadable registry addresses. See [release status and tested architectures](docs/release.md).
 
 The default binding accepts connections from this computer only. For a NAS or another device, configure a trusted HTTPS reverse proxy, set `PUBLIC_ORIGIN` to its exact browser-facing origin, and expose the container only to that proxy. Browser storage and image hashing require a secure context: HTTPS, or a local loopback address. Plain `http://NAS-IP` is not the supported remote setup. The proxy must preserve the configured Host and the security headers. Do not mount your music library or Docker socket into this application. See [deployment options](docs/deployment.md).
 

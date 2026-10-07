@@ -23,11 +23,11 @@ After backing up, give the current image an explicit rollback tag:
 备份后，给当前镜像保留一个明确回退名称：
 
 ```sh
-docker tag playlist-avatar:0.2.0-local playlist-avatar:before-update
+docker tag playlist-avatar:0.2.1-local playlist-avatar:before-update
 docker compose stop
 ```
 
-If your selected image is `playlist-avatar:0.2.0-arm64`, use that tag as the first argument to `docker tag` instead. 若当前使用ARM镜像，上一条docker tag的第一个参数改为 `playlist-avatar:0.2.0-arm64`。
+If your selected image is `playlist-avatar:0.2.1-arm64`, use that tag as the first argument to `docker tag` instead. 若当前使用ARM镜像，上一条docker tag的第一个参数改为 `playlist-avatar:0.2.1-arm64`。
 
 Replace the source files with the approved new version while retaining your private `.env`, then run:
 
@@ -52,9 +52,9 @@ Stop the new version and set `PLAYLIST_AVATAR_IMAGE=playlist-avatar:before-updat
 docker compose up -d --no-build
 ```
 
-An old application may not understand records written by a newer storage format. Keep pre-update ZIP backups. Import a supported backup as a copy, or temporarily use a separate origin/browser profile to inspect it without clearing the original library. Do not assume container rollback also rolls back IndexedDB. This update migrates IndexedDB to version3 while preserving old recipes and Blobs. Version0.1.2 and earlier may fail to open the newer database on the same origin; use a pre-update ZIP in a separate origin/profile for rollback. Recipe/package version1 and guarded version0 copy migration remain supported.
+An old application may not understand records written by a newer storage format. Keep pre-update ZIP backups. Import a supported backup as a copy, or temporarily use a separate origin/browser profile to inspect it without clearing the original library. Do not assume container rollback also rolls back IndexedDB. This update migrates IndexedDB to version4 while preserving old recipes and Blobs. Version0.2.0 and earlier may fail to open the newer database on the same origin; use a pre-update ZIP in a separate origin/profile for rollback. Recipe/package version1 and guarded version0 copy migration remain supported.
 
-旧应用不一定能读取新存储格式，请保留更新前的ZIP。将受支持备份恢复为副本，或用独立origin/浏览器配置文件检查，避免清空原库。容器回退不会同步回退IndexedDB。本轮数据库升至v3并保留旧配方与Blob。0.1.2及更早版本可能无法在同一origin打开新版数据库；回退时在独立origin/配置文件使用更新前ZIP。配方/作品包v1与v0复制迁移仍受支持。
+旧应用不一定能读取新存储格式，请保留更新前的ZIP。将受支持备份恢复为副本，或用独立origin/浏览器配置文件检查，避免清空原库。容器回退不会同步回退IndexedDB。本轮数据库升至v4并保留旧配方与Blob。0.2.0及更早版本可能无法在同一origin打开新版数据库；回退时在独立origin/配置文件使用更新前ZIP。配方/作品包v1与v0复制迁移仍受支持。
 
 ## Move browser/address / 换浏览器或地址
 
